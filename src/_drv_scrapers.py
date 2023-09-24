@@ -20,7 +20,7 @@ from selenium.webdriver.common.keys import Keys
 # from selenium.webdriver.support import expected_conditions as EC
 # from selenium.webdriver.support.ui import WebDriverWait
 
-from ._decorators import retry
+from src._decorators import retry
 
 
 class CustomRequests:
@@ -60,9 +60,9 @@ class CustomRequests:
     def get_response(self, url):
         try:
             proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}
+            proxies = {"http": proxy, "https": proxy}  # noqa
 
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, proxies=proxies, timeout=5)
+            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
             response.raise_for_status()  # Raise an exception for HTTP error status codes
         except Exception as e:
             print("INFO  - Failed to get response: ", e)
@@ -72,9 +72,9 @@ class CustomRequests:
     def fetch_soup(self, url):
         try:
             proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}
+            proxies = {"http": proxy, "https": proxy}  # noqa
 
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, proxies=proxies, timeout=5)
+            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             soup = BeautifulSoup(response.text, "html.parser")
             return soup
@@ -86,9 +86,9 @@ class CustomRequests:
     def fetch_soup_lxml(self, url):
         try:
             proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}
+            proxies = {"http": proxy, "https": proxy}  # noqa
 
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, proxies=proxies, timeout=5)
+            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             soup = BeautifulSoup(response.text, features="xml")
             return soup
@@ -136,9 +136,9 @@ class CustomWebDriver:
         self.chrome_options.add_argument("--disable-gpu")
         self.chrome_options.add_argument("--ignore-certificate-errors")
         self.chrome_options.add_argument("--ignore-ssl-errors")
-        self.chrome_options.add_argument("--window-size=1920,1030")
+        self.chrome_options.add_argument("--window-size=1920,1200")
         self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
-        self.chrome_options.add_argument(f"--proxy-server={random.choice(self.proxy_list)}")
+        # self.chrome_options.add_argument(f"--proxy-server={random.choice(self.proxy_list)}")
         self.browser = None
 
     def test_proxies(self, timeout=5):
@@ -256,7 +256,7 @@ def test_custom_requests():
 
     try:
         scraper = CustomRequests()
-        scraper.test_proxies()
+        # scraper.test_proxies()
         soup = scraper.fetch_soup(url_to_scrape)
         print(f"INFO  - Success fetching response from '{url_to_scrape}'")
     except Exception as e:
@@ -274,7 +274,7 @@ def test_custom_webdriver():
 
     try:
         scraper = CustomWebDriver()
-        scraper.test_proxies()
+        # scraper.test_proxies()
         scraper.open_browser()
         scraper.navigate(url_to_scrape)
         scraper.browser.save_screenshot('./screenshot.png')
@@ -286,5 +286,5 @@ def test_custom_webdriver():
 
 if __name__ == "__main__":
 
-    test_custom_requests()
+    # test_custom_requests()
     test_custom_webdriver()
