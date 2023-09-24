@@ -1,0 +1,9 @@
+numpy
+pandas
+python-dotenv
+feedparser
+requests
+beautifulsoup4
+selenium
+fake_useragent
+lxml
