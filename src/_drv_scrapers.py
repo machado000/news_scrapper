@@ -2,7 +2,7 @@
 This class is used to scrap web pages by fetching content using proxies and random user agents for anonymity.
 It uses package `requests` to provide methods for retrieving responses with `.get_response` or
 get HTML soup object with `.fetch_soup`.
-It also use package `selenium` to initialize a webdriver and provide methods `.open_browser`, `.navigate` to url
+It also use package `selenium` to initialize a webdriver and provide methods `.open_driver`, `.navigate` to url
 and `.fecht_element` for further processing.
 v.2023-09-05
 """
@@ -139,7 +139,7 @@ class CustomWebDriver:
         self.chrome_options.add_argument("--window-size=1920,1200")
         self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
         # self.chrome_options.add_argument(f"--proxy-server={random.choice(self.proxy_list)}")
-        self.browser = None
+        self.driver = None
 
     def test_proxies(self, timeout=5):
         print("INFO  - Testing available proxy servers")
@@ -160,33 +160,33 @@ class CustomWebDriver:
         self.proxy_list = working_proxies
 
     @retry()
-    def open_browser(self):
+    def open_driver(self):
         try:
-            self.browser = webdriver.Chrome(options=self.chrome_options)
-            width = self.browser.get_window_size().get("width")
-            height = self.browser.get_window_size().get("height")
-            # self.browser.implicitly_wait(0.5)
-            user_agent = self.browser.execute_script("return navigator.userAgent;")
-            self.browser.get("http://httpbin.org/ip")
-            body_element = self.browser.find_element(By.TAG_NAME, "body")
+            self.driver = webdriver.Chrome(options=self.chrome_options)
+            width = self.driver.get_window_size().get("width")
+            height = self.driver.get_window_size().get("height")
+            # self.driver.implicitly_wait(0.5)
+            user_agent = self.driver.execute_script("return navigator.userAgent;")
+            self.driver.get("http://httpbin.org/ip")
+            body_element = self.driver.find_element(By.TAG_NAME, "body")
             external_ip = eval(body_element.text)
 
-            print("INFO  - Opened a Chrome browser window with settings:",
+            print("INFO  - Opened a Chrome driver window with settings:",
                   f"INFO  - UA: {user_agent}",
                   f"INFO  - Proxy IPv4: {external_ip['origin']}",
                   f"INFO  - Window size: {width}x{height}",
                   sep="\n")
-            return True
+            return self.driver
 
         except Exception as e:
-            print("ERROR - Could not initialize browser: ", e)
+            print("ERROR - Could not initialize driver: ", e)
             raise Exception
 
     @retry()
     def navigate(self, url):
         print(f"INFO  - Navigating to {url}")
         try:
-            self.browser.get(url)
+            self.driver.get(url)
             print("INFO  - [Success]")
         except Exception as e:
             print(f"ERROR - Error navigating to {url}: ", e)
@@ -196,10 +196,10 @@ class CustomWebDriver:
     def fetch_element(self, css_selector):
         print(f"INFO  - Fetching elements with selector: {css_selector[0:41]}")
         try:
-            # elements = WebDriverWait(self.browser, timeout).until(
+            # elements = WebDriverWait(self.driver, timeout).until(
             #     EC.presence_of_all_elements_located((By.CSS_SELECTOR, css_selector))
             # )
-            elements = self.browser.find_elements(By.CSS_SELECTOR, value=css_selector)
+            elements = self.driver.find_elements(By.CSS_SELECTOR, value=css_selector)
             return elements
         except Exception as e:
             print(f"ERROR - Could not find element {css_selector}: ", e)
@@ -208,11 +208,11 @@ class CustomWebDriver:
 
     @retry()
     def infinite_scroll(self, scroll_pause_time=10, end_scroll_attempts=3):
-        last_height = self.browser.execute_script("return document.body.scrollHeight")
-        # footer = self.browser.find_element(By.CSS_SELECTOR, "div.footerstyles__Footer-sc-1ar2w9j-0.jdgzxt")
-        # ActionChains(self.browser).scroll_to_element(footer).perform()
+        last_height = self.driver.execute_script("return document.body.scrollHeight")
+        # footer = self.driver.find_element(By.CSS_SELECTOR, "div.footerstyles__Footer-sc-1ar2w9j-0.jdgzxt")
+        # ActionChains(self.driver).scroll_to_element(footer).perform()
         print(f"INFO  - Window opened with content height of {last_height}")
-        # self.browser.save_screenshot(f'./screenshot_{last_height}.png')  # DEBUG
+        # self.driver.save_screenshot(f'./screenshot_{last_height}.png')  # DEBUG
 
         attempts = 0
 
@@ -220,14 +220,14 @@ class CustomWebDriver:
 
             for _ in range(3):
                 # press PAGE_DOWN or SCROLL 3 times
-                self.browser.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_DOWN)
+                self.driver.find_element(By.TAG_NAME, 'body').send_keys(Keys.PAGE_DOWN)
                 time.sleep(3)  # time between key presses / scrolls
 
-            # ActionChains(self.browser).scroll_by_amount(0, 600).perform()
+            # ActionChains(self.driver).scroll_by_amount(0, 600).perform()
             time.sleep(scroll_pause_time)  # Wait for aditional content to load
 
-            new_height = self.browser.execute_script("return document.body.scrollHeight")
-            # self.browser.save_screenshot(f'./screenshot_{new_height}.png')  # DEBUG
+            new_height = self.driver.execute_script("return document.body.scrollHeight")
+            # self.driver.save_screenshot(f'./screenshot_{new_height}.png')  # DEBUG
 
             if new_height == last_height:
                 attempts += 1
@@ -241,13 +241,13 @@ class CustomWebDriver:
         print("INFO  - Page seems to be fully loaded")
 
     @retry()
-    def close_browser(self):
+    def close_driver(self):
         try:
-            self.browser.close()
-            print("INFO  - Closed browser window")
+            self.driver.close()
+            print("INFO  - Closed driver window")
             return True
         except Exception as e:
-            print("ERROR - Error closing browser: ", e)
+            print("ERROR - Error closing driver: ", e)
             raise Exception
 
 
@@ -270,16 +270,16 @@ def test_custom_requests():
 
 
 def test_custom_webdriver():
-    url_to_scrape = "https://browsersize.com/"
+    url_to_scrape = "https://driversize.com/"
 
     try:
         scraper = CustomWebDriver()
         # scraper.test_proxies()
-        scraper.open_browser()
+        scraper.open_driver()
         scraper.navigate(url_to_scrape)
-        scraper.browser.save_screenshot('./screenshot.png')
+        scraper.driver.save_screenshot('./screenshot.png')
         print("(INFO  - Saved screenshot image at './screenshot.png'")
-        scraper.close_browser()
+        scraper.close_driver()
     except Exception as e:
         print("ERROR - ", e)
 
