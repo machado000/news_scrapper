@@ -20,7 +20,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 
-from _decorators import retry
+from src._decorators import retry
 
 
 class CustomRequests:
@@ -280,12 +280,6 @@ def test_custom_requests(username, password, endpoint, port):
         print(f"INFO  - Success fetching response from '{url_to_scrape}'")
         print(f"Proxy: {soup.text}")
 
-        # if soup:
-        #     try:
-        #         scraper.save_soup_as_html(soup, "soup_test.html")
-        #     except Exception as e:
-        #         print("ERROR - Unable to save HTML content: ", e)
-
     except Exception as e:
         print("ERROR - Unable to fetch response: ", e)
 
@@ -308,10 +302,10 @@ def test_custom_webdriver(username, password, endpoint, port):
 if __name__ == "__main__":
 
     load_dotenv()
-    endpoint = os.getenv('PROXY_SERVER')
-    port = os.getenv('PROXY_PORT')
     username = os.getenv('PROXY_USERNAME')
     password = os.getenv('PROXY_PASSWORD')
+    endpoint = os.getenv('PROXY_SERVER')
+    port = os.getenv('PROXY_PORT')
     # proxy_string = f"http://{username}:{password}@{endpoint}:{port}"
     # print(proxy_string)
 

@@ -3,14 +3,76 @@ news_scrapper
 v.2023-09-23
 '''
 
+# import codecs
 import json
+import os
 
 import feedparser
 import openai
+from bs4 import BeautifulSoup
+from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys  # noqa
 
-from src._drv_scrapers import CustomWebDriver
+from src._drv_scrapers import CustomRequests, CustomWebDriver
+
+# Load variables from .env
+load_dotenv()
+proxy_username = os.getenv('PROXY_USERNAME')
+proxy_password = os.getenv('PROXY_PASSWORD')
+proxy_server = os.getenv('PROXY_SERVER')
+proxy_port = os.getenv('PROXY_PORT')
+wsj_username = os.getenv('WSJ_USERNAME')
+wsj_password = os.getenv('WSJ_PASSWORD')
+bing_apikey = os.getenv('BING_APIKEY')
+openai_apikey = os.getenv('OPENAI_APIKEY')
+# print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
+
+
+def request_bing_news(session, query, category="Business", results_count=100, freshness="day"):
+
+    url = "https://api.bing.microsoft.com/v7.0/news/search"
+
+    params = {
+        "q": query,
+        "category": category,
+        "count": results_count,
+        "freshness": freshness,
+        "mkt": "en-US",
+        "setLang": "en"
+    }
+
+    headers = {
+        "Ocp-Apim-Subscription-Key": bing_apikey
+    }
+
+    # Make the API request
+    response = session.get(url, params=params, headers=headers)
+
+    if response.status_code == 200:
+        response_data = response.json()
+
+        results = []
+        all_links = []
+
+        for value in response_data["value"]:
+            extracted_entry = {
+                "title": value.get("name", ""),
+                "link": value.get("url", ""),
+                "summary": value.get("description", ""),
+                "published": value.get("datePublished", ""),
+            }
+            results.append(extracted_entry)
+
+            all_links.append(value.get("url", ""))
+
+        # Create a dictionary for the extracted data
+        result_dict = {"articles": results}
+
+        # Convert the dictionary to a JSON string
+        result_json = json.dumps(result_dict, indent=4)
+
+        return result_json, all_links  # Return both the JSON and the list of entry.link values
 
 
 def extract_rss_article_data(rss_feed_urls):
@@ -55,7 +117,7 @@ def extract_rss_article_data(rss_feed_urls):
     result_dict = {"articles": extracted_data}
 
     # Convert the dictionary to a JSON string
-    result_json = json.dumps(result_dict, indent=4)
+    result_json = json.dumps(result_dict, ensure_ascii=False, indent=4)
 
     return result_json, all_links  # Return both the JSON and the list of entry.link values
 
@@ -73,8 +135,8 @@ def login_wsj(driver):
     """
     # Open the login page
     login_url = "https://session.wsj.com"
-    username = "kbsquire"
-    password = "poker"
+    username = wsj_username
+    password = wsj_password
 
     print(f"INFO  - Navigating to {login_url}")
     try:
@@ -103,7 +165,7 @@ def login_wsj(driver):
 
 def fetch_page_source(driver, url):
     """
-    Navigate to a url and save page_source as local html file.
+    Navigate to a url and fetch page_source.
 
     Args:
     - Selenium Chrome webdriver object.
@@ -111,7 +173,6 @@ def fetch_page_source(driver, url):
 
     Returns:
     - HTML page content.
-    - Local file saved as "page_source.html".
     """
     print(f"INFO  - Navigating to {url}")
     try:
@@ -124,71 +185,102 @@ def fetch_page_source(driver, url):
     # Parse the HTML content of the page using BeautifulSoup
     page_source = driver.page_source
 
-    with open("page_source.html", "w", encoding="utf-8") as file:
-        file.write(page_source)
-
     return page_source
 
 
 if __name__ == "__main__":
 
+    try:
+        """
+        A-1. Fetch urls from RSS feeds
+        """
+        rss_feed_urls = [
+            "https://feeds.a.dj.com/rss/RSSOpinion.xml",
+            "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+            "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
+            "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+            "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+            "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
+        ]
+
+        result_json, all_links = extract_rss_article_data(rss_feed_urls)
+
+        # Save the JSON to a file
+        with open('rss_feed.json', 'w', encoding='utf-8') as file:
+            file.write(result_json)
+
+        print(all_links[0])
+
+    #     """
+    #     A-2. Open Selenium Chrome webdriver and login to WSJ
+    #     """
+    #     handler = CustomWebDriver(username=proxy_username, password=proxy_password,
+    #                               endpoint=proxy_server, port=proxy_port)
+    #     driver = handler.open_driver()
+    #     driver.implicitly_wait(3)  # Adjust the wait time as needed
+
+    #     login_wsj(driver)
+
+    #     """
+    #     A-3. Fetch and save page HTML source
+    #     """
+    #     # Fetch article text
+    #     # url = "https://www.wsj.com/articles/ipo-market-arm-instacart-klaviyo-stocks-ee65206?mod=rss_markets_main"
+    #     url = all_links[0]
+
+    #     page_source = fetch_page_source(driver, url)  # DEBUG check page_source.html
+
+    #     # Parse the HTML content with BeautifulSoup
+    #     soup = BeautifulSoup(page_source, 'html.parser')
+
+    #     with open('page_source.html', 'w', encoding="utf-8") as file:
+    #         file.write(soup.prettify())
+
+    #     # Close the driver when done
+    #     driver.quit()
+
+    #     """
+    #     A-4. Extract article text from page HTML source
+    #     """
+    #     # TODO
+
+    except Exception as e:
+        print("ERROR - ", e)
+
     """
-    1. Fetch urls from RSS feeds
+    B-1. Fetch urls from Bing API
     """
-    # rss_feed_urls = [
-    #     "https://feeds.a.dj.com/rss/RSSOpinion.xml",
-    #     "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
-    #     "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
-    #     "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
-    #     "https://feeds.a.dj.com/rss/RSSWSJD.xml",
-    #     "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
-    # ]
+    handler = CustomRequests(username=proxy_username, password=proxy_password, endpoint=proxy_server, port=proxy_port)
+    session = handler.session
+    soup = handler.fetch_soup("https://ipinfo.io/ip")
+    print(f"INFO  - Success opening session with proxy ip '{soup.text}'")
 
-    # result_json, all_links = extract_rss_article_data(rss_feed_urls)
+    query = '"Activist investor" | "Carl Icahn" | "corporate governance" | "universal proxy" | "13D Monitor" | "Schedule 13D"'  # noqa
 
-    # # Save the JSON to a file
-    # with open('rss_feed.json', 'w') as json_file:
-    #     json_file.write(result_json)
+    response_json, all_links = request_bing_news(session, query, results_count=100, freshness="month")
 
-    # print(all_links[0:3])
+    with open('bing_news_results.json', 'w', encoding='utf-8') as file:
+        file.write(response_json)
 
-    """
-    2. Open Selenium Chrome webdriver and login to WSJ
-    """
-    handler = CustomWebDriver()
-    driver = handler.open_driver()
-    driver.implicitly_wait(3)  # Adjust the wait time as needed
-
-    login_wsj(driver)
-
-    """
-    3. Fetch and save page HTML source
-    """
-    # Fetch article text
-    url = "https://www.wsj.com/articles/ipo-market-arm-instacart-klaviyo-stocks-ee65206?mod=rss_markets_main"
-
-    page_source = fetch_page_source(driver, url)  # DEBUG check page_source.html
-
-    # Close the driver when done
-    driver.quit()
-
-    """
-    4. Extract article text from page HTML source
-    """
-    # TODO
+    # print(response_json)
+    print(all_links[0:3])
 
     """
     5. Send article text to openai and fetch summary
     """
-    api_key = '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'
+    api_key = openai_apikey
     file_path = 'article.txt'
 
-    with open(file_path, 'r') as file:
+    with open(file_path, 'r', encoding='utf-8') as file:
         input_text = file.read()
 
+    # print(input_text) # DEBUG
+
+    prompt = f"Using a style suitable for business reports compose a 200-word summary of the following text:\n{input_text}."  # noqa
+
     response = openai.Completion.create(
-        engine="text-davinci-002",
-        prompt=f"Generate a coherent human-like 200 word summary of the following text:\n{input_text}",
+        engine="text-davinci-003",
+        prompt=prompt,
         max_tokens=400,  # Adjust max_tokens for the desired length of the summary
         api_key=api_key
     )
