@@ -6,55 +6,33 @@ It also use package `selenium` to initialize a webdriver and provide methods `.o
 and `.fecht_element` for further processing.
 v.2023-09-05
 """
+import os
 import random
-import requests
 import time
+import zipfile
 
-from fake_useragent import UserAgent
+import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+from fake_useragent import UserAgent
 from selenium import webdriver
-# from selenium.webdriver import ActionChains
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-# from selenium.webdriver.support import expected_conditions as EC
-# from selenium.webdriver.support.ui import WebDriverWait
+from webdriver_manager.chrome import ChromeDriverManager
 
-from src._decorators import retry
+from _decorators import retry
 
 
 class CustomRequests:
 
     def __init__(self, proxy_list=None):
-        self.proxy_list = proxy_list or [
-            "http://196.51.132.133:8800",
-            "http://196.51.129.230:8800",
-            "http://196.51.135.162:8800",
-            "http://196.51.129.252:8800"
-        ]
 
         self.ua = UserAgent(
             browsers=["edge", "chrome", "firefox"],
             fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
         )
-
-    def test_proxies(self, timeout=5):
-        print("INFO  - Testing available proxy servers")
-        working_proxies = []
-
-        for proxy in self.proxy_list:
-            proxies = {"http": proxy, "https": proxy}
-            try:
-                response = requests.get("http://httpbin.org/ip", proxies=proxies, timeout=timeout)
-                if response.status_code == 200:
-                    working_proxies.append(proxy)
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    element = eval(soup.text)
-                    print(f"INFO  - [OK] Proxy {proxy} response 200 -- external IP ", element['origin'])
-            except Exception as e:
-                print(f"ERROR - Proxy {proxy} failed to respond: ", e)
-
-        self.proxy_list = working_proxies
 
     @retry()
     def get_response(self, url):
@@ -111,13 +89,7 @@ class CustomRequests:
 
 class CustomWebDriver:
 
-    def __init__(self, proxy_list=None):
-        self.proxy_list = proxy_list or [
-            "http://196.51.129.230:8800",
-            "http://196.51.129.252:8800",
-            "http://196.51.132.133:8800",
-            "http://196.51.135.162:8800",
-        ]
+    def __init__(self, username=None, password=None, endpoint=None, port=None):
 
         self.ua = UserAgent(
             browsers=["edge", "chrome", "firefox"],
@@ -126,54 +98,42 @@ class CustomWebDriver:
             fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
         )
 
+        self.proxies_extension = self.proxies(username, password, endpoint, port)
+
         self.chrome_options = Options()
+        # self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_argument("--headless=new")
-        self.chrome_options.add_argument("--no-sandbox")
-        self.chrome_options.add_argument("--disable-dev-shm-usage")
-        self.chrome_options.add_argument("--disable-blink-features")
-        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        self.chrome_options.add_argument("--disable-extensions")
-        self.chrome_options.add_argument("--disable-gpu")
-        self.chrome_options.add_argument("--ignore-certificate-errors")
-        self.chrome_options.add_argument("--ignore-ssl-errors")
-        self.chrome_options.add_argument("--window-size=1920,1200")
-        self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
-        # self.chrome_options.add_argument(f"--proxy-server={random.choice(self.proxy_list)}")
+        # self.chrome_options.add_argument("--no-sandbox")
+        # self.chrome_options.add_argument("--disable-dev-shm-usage")
+        # self.chrome_options.add_argument("--disable-blink-features")
+        # self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        # self.chrome_options.add_argument("--disable-extensions")
+        # self.chrome_options.add_argument("--disable-gpu")
+        # self.chrome_options.add_argument("--ignore-certificate-errors")
+        # self.chrome_options.add_argument("--ignore-ssl-errors")
+        # self.chrome_options.add_argument("--window-size=1920,1200")
+        # self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
+        # self.chrome_options.add_extension(self.proxies_extension)
         self.driver = None
 
-    def test_proxies(self, timeout=5):
-        print("INFO  - Testing available proxy servers")
-        working_proxies = []
-
-        for proxy in self.proxy_list:
-            proxies = {"http": proxy, "https": proxy}
-            try:
-                response = requests.get("http://httpbin.org/ip", proxies=proxies, timeout=timeout)
-                if response.status_code == 200:
-                    working_proxies.append(proxy)
-                    soup = BeautifulSoup(response.text, "html.parser")
-                    element = eval(soup.text)
-                    print(f"INFO  - [OK] Proxy {proxy} response 200 -- external IP ", element['origin'])
-            except Exception as e:
-                print(f"ERROR - Proxy {proxy} failed to respond: ", e)
-
-        self.proxy_list = working_proxies
+        # print(self.chrome_options.to_capabilities()) # DEBUG
 
     @retry()
     def open_driver(self):
         try:
-            self.driver = webdriver.Chrome(options=self.chrome_options)
+            # self.driver = webdriver.Chrome(options=self.chrome_options)
+            self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.chrome_options)  # noqa
             width = self.driver.get_window_size().get("width")
             height = self.driver.get_window_size().get("height")
             # self.driver.implicitly_wait(0.5)
             user_agent = self.driver.execute_script("return navigator.userAgent;")
-            self.driver.get("http://httpbin.org/ip")
+            self.driver.get("https://ipinfo.io/ip")
             body_element = self.driver.find_element(By.TAG_NAME, "body")
-            external_ip = eval(body_element.text)
+            external_ip = body_element.text
 
             print("INFO  - Opened a Chrome driver window with settings:",
                   f"INFO  - UA: {user_agent}",
-                  f"INFO  - Proxy IPv4: {external_ip['origin']}",
+                  f"INFO  - Proxy IPv4: {external_ip}",
                   f"INFO  - Window size: {width}x{height}",
                   sep="\n")
             return self.driver
@@ -250,6 +210,67 @@ class CustomWebDriver:
             print("ERROR - Error closing driver: ", e)
             raise Exception
 
+    def proxies(self, username, password, endpoint, port):
+        manifest_json = """
+        {
+            "version": "1.0.0",
+            "manifest_version": 2,
+            "name": "Proxies",
+            "permissions": [
+                "proxy",
+                "tabs",
+                "unlimitedStorage",
+                "storage",
+                "<all_urls>",
+                "webRequest",
+                "webRequestBlocking"
+            ],
+            "background": {
+                "scripts": ["background.js"]
+            },
+            "minimum_chrome_version":"22.0.0"
+        }
+        """
+
+        background_js = """
+        var config = {
+                mode: "fixed_servers",
+                rules: {
+                singleProxy: {
+                    scheme: "http",
+                    host: "%s",
+                    port: parseInt(%s)
+                },
+                bypassList: ["localhost"]
+                }
+            };
+
+        chrome.proxy.settings.set({value: config, scope: "regular"}, function() {});
+
+        function callbackFn(details) {
+            return {
+                authCredentials: {
+                    username: "%s",
+                    password: "%s"
+                }
+            };
+        }
+
+        chrome.webRequest.onAuthRequired.addListener(
+                    callbackFn,
+                    {urls: ["<all_urls>"]},
+                    ['blocking']
+        );
+        """ % (endpoint, port, username, password)
+
+        extension = 'proxies_extension.zip'
+
+        with zipfile.ZipFile(extension, 'w') as zp:
+            zp.writestr("manifest.json", manifest_json)
+            zp.writestr("background.js", background_js)
+
+        return extension
+
 
 def test_custom_requests():
     url_to_scrape = "https://www.scrapethissite.com/pages/simple/"
@@ -269,16 +290,16 @@ def test_custom_requests():
             print("ERROR - Unable to save HTML content: ", e)
 
 
-def test_custom_webdriver():
-    url_to_scrape = "https://driversize.com/"
+def test_custom_webdriver(username, password, endpoint, port):
+    url_to_scrape = "https://browsersize.com/"
 
     try:
-        scraper = CustomWebDriver()
+        scraper = CustomWebDriver(username, password, endpoint, port)
         # scraper.test_proxies()
         scraper.open_driver()
         scraper.navigate(url_to_scrape)
         scraper.driver.save_screenshot('./screenshot.png')
-        print("(INFO  - Saved screenshot image at './screenshot.png'")
+        print("INFO  - Saved screenshot image at './screenshot.png'")
         scraper.close_driver()
     except Exception as e:
         print("ERROR - ", e)
@@ -287,4 +308,28 @@ def test_custom_webdriver():
 if __name__ == "__main__":
 
     # test_custom_requests()
-    test_custom_webdriver()
+
+    load_dotenv()
+    endpoint = os.getenv('PROXY_SERVER')
+    port = os.getenv('PROXY_PORT')
+    username = os.getenv('PROXY_USERNAME')
+    password = os.getenv('PROXY_PASSWORD')
+    proxy_string = f"http://{username}:{password}@{endpoint}:{port}"
+    print(proxy_string)
+
+    test_custom_webdriver(username, password, endpoint, port)
+
+    scraper = CustomWebDriver(username, password, endpoint, port)
+    proxies_extension = scraper.proxies_extension
+
+    chrome_options = webdriver.ChromeOptions()
+    chrome_options.add_extension(proxies_extension)
+    chrome_options.add_argument("--headless=new")
+
+    # print(chrome_options.to_capabilities())
+
+    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+    driver.get("https://ipinfo.io/ip")
+
+    body_element = driver.find_element(By.TAG_NAME, "body")
+    print(body_element.text)
