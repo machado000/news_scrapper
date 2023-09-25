@@ -8,3 +8,4 @@ beautifulsoup4
 fake_useragent
 lxml
 selenium
+webdriver_manager
