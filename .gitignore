@@ -161,5 +161,6 @@ cython_debug/
 
 # User custom files
 /files
+*.csv
 *.html
 *.json
