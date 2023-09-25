@@ -5,6 +5,6 @@
 python -m venv venv
 
 # install required packages
-./setup.sh # Bash
-.\setup.ps1 # Powershell
+./setup.sh          # Linux
+.\setup.ps1         # Powershell
 ```
