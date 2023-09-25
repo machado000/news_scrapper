@@ -292,8 +292,8 @@ def test_custom_webdriver(username, password, endpoint, port):
         # scraper.test_proxies()
         scraper.open_driver()
         scraper.navigate(url_to_scrape)
-        scraper.driver.save_screenshot('./screenshot.png')
-        print("INFO  - Saved screenshot image at './screenshot.png'")
+        scraper.driver.save_screenshot('./files/screenshot.png')
+        print("INFO  - Saved screenshot image at './files/screenshot.png'")
         scraper.close_driver()
     except Exception as e:
         print("ERROR - ", e)

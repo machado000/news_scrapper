@@ -9,12 +9,12 @@ import os
 
 import feedparser
 import openai
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup  # noqa
 from dotenv import load_dotenv
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys  # noqa
 
-from src._drv_scrapers import CustomRequests, CustomWebDriver
+from src._drv_scrapers import CustomRequests, CustomWebDriver   # noqa
 
 # Load variables from .env
 load_dotenv()
@@ -27,6 +27,11 @@ wsj_password = os.getenv('WSJ_PASSWORD')
 bing_apikey = os.getenv('BING_APIKEY')
 openai_apikey = os.getenv('OPENAI_APIKEY')
 # print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
+
+files_path = "./files"
+
+if not os.path.exists(files_path):
+    os.makedirs(files_path)
 
 
 def request_bing_news(session, query, category="Business", results_count=100, freshness="day"):
@@ -206,7 +211,7 @@ if __name__ == "__main__":
         result_json, all_links = extract_rss_article_data(rss_feed_urls)
 
         # Save the JSON to a file
-        with open('rss_feed.json', 'w', encoding='utf-8') as file:
+        with open('./files/rss_feed.json', 'w', encoding='utf-8') as file:
             file.write(result_json)
 
         print(all_links[0])
@@ -233,7 +238,7 @@ if __name__ == "__main__":
     #     # Parse the HTML content with BeautifulSoup
     #     soup = BeautifulSoup(page_source, 'html.parser')
 
-    #     with open('page_source.html', 'w', encoding="utf-8") as file:
+    #     with open('./files/page_source.html', 'w', encoding="utf-8") as file:
     #         file.write(soup.prettify())
 
     #     # Close the driver when done
@@ -259,7 +264,7 @@ if __name__ == "__main__":
 
     response_json, all_links = request_bing_news(session, query, results_count=100, freshness="month")
 
-    with open('bing_news_results.json', 'w', encoding='utf-8') as file:
+    with open('./files/bing_news_results.json', 'w', encoding='utf-8') as file:
         file.write(response_json)
 
     # print(response_json)
@@ -269,7 +274,7 @@ if __name__ == "__main__":
     5. Send article text to openai and fetch summary
     """
     api_key = openai_apikey
-    file_path = 'article.txt'
+    file_path = './files/article.txt'
 
     with open(file_path, 'r', encoding='utf-8') as file:
         input_text = file.read()
