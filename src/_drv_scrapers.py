@@ -7,7 +7,6 @@ and `.fecht_element` for further processing.
 v.2023-09-05
 """
 import os
-import random
 import time
 import zipfile
 
@@ -16,7 +15,6 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
 from selenium import webdriver
-from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -27,21 +25,28 @@ from _decorators import retry
 
 class CustomRequests:
 
-    def __init__(self, proxy_list=None):
+    def __init__(self, username, password, endpoint, port):
 
-        self.ua = UserAgent(
+        # proxy_auth = HTTPProxyAuth(username, password)
+        proxy_url = f"http://{username}:{password}@{endpoint}:{port}"
+
+        self.session = requests.Session()
+        self.session.proxies = {'http': proxy_url, 'https': proxy_url}
+        # self.session.auth = proxy_auth
+
+        ua = UserAgent(
             browsers=["edge", "chrome", "firefox"],
             fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
         )
 
+        self.session.headers.update({'User-Agent': ua.random})
+
     @retry()
     def get_response(self, url):
         try:
-            proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}  # noqa
-
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
+            response = self.session.get(url, timeout=5)
             response.raise_for_status()  # Raise an exception for HTTP error status codes
+            return response
         except Exception as e:
             print("INFO  - Failed to get response: ", e)
             raise Exception
@@ -49,10 +54,7 @@ class CustomRequests:
     @retry()
     def fetch_soup(self, url):
         try:
-            proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}  # noqa
-
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
+            response = self.session.get(url, timeout=5)
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             soup = BeautifulSoup(response.text, "html.parser")
             return soup
@@ -63,10 +65,7 @@ class CustomRequests:
     @retry()
     def fetch_soup_lxml(self, url):
         try:
-            proxy = random.choice(self.proxy_list)
-            proxies = {"http": proxy, "https": proxy}  # noqa
-
-            response = requests.get(url, headers={"User-Agent": self.ua.random}, timeout=5)  # proxies=proxies,
+            response = self.session.get(url, timeout=5)
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             soup = BeautifulSoup(response.text, features="xml")
             return soup
@@ -100,20 +99,18 @@ class CustomWebDriver:
 
         self.proxies_extension = self.proxies(username, password, endpoint, port)
 
-        self.chrome_options = Options()
-        # self.chrome_options = webdriver.ChromeOptions()
+        self.chrome_options = webdriver.ChromeOptions()
         self.chrome_options.add_argument("--headless=new")
-        # self.chrome_options.add_argument("--no-sandbox")
-        # self.chrome_options.add_argument("--disable-dev-shm-usage")
-        # self.chrome_options.add_argument("--disable-blink-features")
-        # self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        # self.chrome_options.add_argument("--disable-extensions")
-        # self.chrome_options.add_argument("--disable-gpu")
-        # self.chrome_options.add_argument("--ignore-certificate-errors")
-        # self.chrome_options.add_argument("--ignore-ssl-errors")
-        # self.chrome_options.add_argument("--window-size=1920,1200")
-        # self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
-        # self.chrome_options.add_extension(self.proxies_extension)
+        self.chrome_options.add_argument("--no-sandbox")
+        self.chrome_options.add_argument("--disable-dev-shm-usage")
+        self.chrome_options.add_argument("--disable-blink-features")
+        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+        self.chrome_options.add_argument("--disable-gpu")
+        self.chrome_options.add_argument("--ignore-certificate-errors")
+        self.chrome_options.add_argument("--ignore-ssl-errors")
+        self.chrome_options.add_argument("--window-size=1920,1200")
+        self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
+        self.chrome_options.add_extension(self.proxies_extension)
         self.driver = None
 
         # print(self.chrome_options.to_capabilities()) # DEBUG
@@ -272,22 +269,25 @@ class CustomWebDriver:
         return extension
 
 
-def test_custom_requests():
-    url_to_scrape = "https://www.scrapethissite.com/pages/simple/"
+def test_custom_requests(username, password, endpoint, port):
+    # url_to_scrape = "https://www.scrapethissite.com/pages/simple/"
+    url_to_scrape = "https://ipinfo.io/ip"
 
     try:
-        scraper = CustomRequests()
+        scraper = CustomRequests(username, password, endpoint, port)
         # scraper.test_proxies()
         soup = scraper.fetch_soup(url_to_scrape)
         print(f"INFO  - Success fetching response from '{url_to_scrape}'")
+        print(f"Proxy: {soup.text}")
+
+        # if soup:
+        #     try:
+        #         scraper.save_soup_as_html(soup, "soup_test.html")
+        #     except Exception as e:
+        #         print("ERROR - Unable to save HTML content: ", e)
+
     except Exception as e:
         print("ERROR - Unable to fetch response: ", e)
-
-    if soup:
-        try:
-            scraper.save_soup_as_html(soup, "soup_test.html")
-        except Exception as e:
-            print("ERROR - Unable to save HTML content: ", e)
 
 
 def test_custom_webdriver(username, password, endpoint, port):
@@ -307,29 +307,14 @@ def test_custom_webdriver(username, password, endpoint, port):
 
 if __name__ == "__main__":
 
-    # test_custom_requests()
-
     load_dotenv()
     endpoint = os.getenv('PROXY_SERVER')
     port = os.getenv('PROXY_PORT')
     username = os.getenv('PROXY_USERNAME')
     password = os.getenv('PROXY_PASSWORD')
-    proxy_string = f"http://{username}:{password}@{endpoint}:{port}"
-    print(proxy_string)
+    # proxy_string = f"http://{username}:{password}@{endpoint}:{port}"
+    # print(proxy_string)
+
+    test_custom_requests(username, password, endpoint, port)
 
     test_custom_webdriver(username, password, endpoint, port)
-
-    scraper = CustomWebDriver(username, password, endpoint, port)
-    proxies_extension = scraper.proxies_extension
-
-    chrome_options = webdriver.ChromeOptions()
-    chrome_options.add_extension(proxies_extension)
-    chrome_options.add_argument("--headless=new")
-
-    # print(chrome_options.to_capabilities())
-
-    driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
-    driver.get("https://ipinfo.io/ip")
-
-    body_element = driver.find_element(By.TAG_NAME, "body")
-    print(body_element.text)
