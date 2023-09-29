@@ -61,8 +61,6 @@ class MongoCnx():
             f"INFO  - Inserted {new_documents_count}, updated {updated_documents_count} documents \
 on collection '{collection.name}'")
 
-        self.client.close()
-
         return None
 
     def get_urls_by_source_and_date(self, collection_name, source, start_date):
