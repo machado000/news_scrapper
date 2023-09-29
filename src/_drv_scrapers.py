@@ -14,13 +14,11 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
-from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
+from selenium.webdriver import Edge, EdgeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
 
-from src._decorators import retry
+from _decorators import retry
 
 
 class CustomRequests:
@@ -40,6 +38,8 @@ class CustomRequests:
         )
 
         self.session.headers.update({'User-Agent': ua.random})
+        soup = self.fetch_soup("https://ipinfo.io/ip")
+        print(f"INFO  - Success opening 'requests' session with proxy ip '{soup.text}'")
 
     @retry()
     def get_response(self, url):
@@ -90,36 +90,36 @@ class CustomWebDriver:
 
     def __init__(self, username=None, password=None, endpoint=None, port=None):
 
-        self.ua = UserAgent(
-            browsers=["edge", "chrome", "firefox"],
-            os=["windows", "macos"],
-            min_percentage=0.03,
-            fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
-        )
+        self.options = EdgeOptions()
+        self.options.use_chromium = True  # Use Chromium-based Edge
+        # self.options.add_argument("--headless=new")
+        self.options.add_argument("--no-sandbox")
+        self.options.add_argument("--disable-dev-shm-usage")
+        self.options.add_argument("--disable-blink-features")
+        self.options.add_argument("--disable-blink-features=AutomationControlled")
+        self.options.add_argument("--disable-gpu")
+        # self.options.add_argument('--disable-javascript')  # EXPERIMENTAL
+        self.options.add_argument("--ignore-certificate-errors")
+        self.options.add_argument("--ignore-ssl-errors")
+        self.options.add_argument("--window-size=1920,1200")
+        self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
+        self.ua = UserAgent(browsers=["edge", "chrome", "firefox"], os=["windows", "macos"], min_percentage=0.03)
+        # fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
+        self.options.add_argument(f"--user-agent={self.ua.random}")
 
         self.proxies_extension = self.proxies(username, password, endpoint, port)
+        self.options.add_extension(self.proxies_extension)
 
-        self.chrome_options = webdriver.ChromeOptions()
-        self.chrome_options.add_argument("--headless=new")
-        self.chrome_options.add_argument("--no-sandbox")
-        self.chrome_options.add_argument("--disable-dev-shm-usage")
-        self.chrome_options.add_argument("--disable-blink-features")
-        self.chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-        self.chrome_options.add_argument("--disable-gpu")
-        self.chrome_options.add_argument("--ignore-certificate-errors")
-        self.chrome_options.add_argument("--ignore-ssl-errors")
-        self.chrome_options.add_argument("--window-size=1920,1200")
-        self.chrome_options.add_argument(f"--user-agent={self.ua.random}")
-        self.chrome_options.add_extension(self.proxies_extension)
         self.driver = None
 
-        # print(self.chrome_options.to_capabilities()) # DEBUG
+        # print(self.options.to_capabilities()) # DEBUG
 
     @retry()
     def open_driver(self):
         try:
-            # self.driver = webdriver.Chrome(options=self.chrome_options)
-            self.driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=self.chrome_options)  # noqa
+            self.driver = Edge(options=self.options)
+
             width = self.driver.get_window_size().get("width")
             height = self.driver.get_window_size().get("height")
             # self.driver.implicitly_wait(0.5)
@@ -128,7 +128,7 @@ class CustomWebDriver:
             body_element = self.driver.find_element(By.TAG_NAME, "body")
             external_ip = body_element.text
 
-            print("INFO  - Opened a Chrome driver window with settings:",
+            print("INFO  - Opened an Edge driver window with settings:",
                   f"INFO  - UA: {user_agent}",
                   f"INFO  - Proxy IPv4: {external_ip}",
                   f"INFO  - Window size: {width}x{height}",
@@ -271,14 +271,11 @@ class CustomWebDriver:
 
 def test_custom_requests(username, password, endpoint, port):
     # url_to_scrape = "https://www.scrapethissite.com/pages/simple/"
-    url_to_scrape = "https://ipinfo.io/ip"
 
     try:
         scraper = CustomRequests(username, password, endpoint, port)
+        print(type(scraper.session))
         # scraper.test_proxies()
-        soup = scraper.fetch_soup(url_to_scrape)
-        print(f"INFO  - Success fetching response from '{url_to_scrape}'")
-        print(f"Proxy: {soup.text}")
 
     except Exception as e:
         print("ERROR - Unable to fetch response: ", e)
