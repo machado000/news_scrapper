@@ -155,39 +155,51 @@ def extract_rss_article_urls(rss_feed_urls):
 if __name__ == "__main__":
 
     # FETCH URLS FROM BING API, UPDATE MONGODB
-    mongo_cnx = MongoCnx("news_db")
-    collection = mongo_cnx.db["keywords"]
+    try:
+        mongo_cnx = MongoCnx("news_db")
+        collection = mongo_cnx.db["keywords"]
 
-    query_result = collection.find({"active": True})
-    keywords = [document["keyword"] for document in query_result]
-    print("DEBUG - ", keywords)
+        query_result = collection.find({"active": True})
+        keywords = [document["keyword"] for document in query_result]
+        print("DEBUG - ", keywords)
 
-    handler = CustomRequests(username=proxy_username, password=proxy_password, endpoint=proxy_server, port=proxy_port)
-    session = handler.session
+        handler = CustomRequests(username=proxy_username, password=proxy_password,
+                                 endpoint=proxy_server, port=proxy_port)
+        session = handler.session
+        all_results_dict = {'news': []}
 
-    for keyword in keywords:
-        response_dict, _ = request_bing_news_urls(session, keyword, results_count=100, freshness="month")
-        mongo_cnx.update_collection("news", response_dict["news"])
+        for keyword in keywords:
+            response_dict, _ = request_bing_news_urls(session, keyword, results_count=100, freshness="month")
+            all_results_dict['news'].extend(response_dict['news'])
 
-        # result_json = json.dumps(response_dict, ensure_ascii=False, indent=4)
-        # with open('./files/bing_last_results.json', 'w', encoding='utf-8') as file:
-        #     file.write(result_json)
+        mongo_cnx.update_collection("news", all_results_dict["news"])
+
+        result_json = json.dumps(all_results_dict, ensure_ascii=False, indent=4)
+        with open('./files/bing_last_results.json', 'w', encoding='utf-8') as file:
+            file.write(result_json)
+
+    except Exception as e:
+        print("ERROR - ", e)
 
     # FETCH URLS FROM WSJ RSS FEEDS, UPDATE MONGODB
-    rss_feed_urls = [
-        "https://feeds.a.dj.com/rss/RSSOpinion.xml",
-        "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
-        "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
-        "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
-        "https://feeds.a.dj.com/rss/RSSWSJD.xml",
-        "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
-    ]
+    try:
+        rss_feed_urls = [
+            "https://feeds.a.dj.com/rss/RSSOpinion.xml",
+            "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+            "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
+            "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+            "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+            "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
+        ]
 
-    response_dict, all_links = extract_rss_article_urls(rss_feed_urls)
+        response_dict, all_links = extract_rss_article_urls(rss_feed_urls)
 
-    mongo_cnx = MongoCnx("news_db")
-    mongo_cnx.update_collection("news", response_dict["news"])
+        mongo_cnx = MongoCnx("news_db")
+        mongo_cnx.update_collection("news", response_dict["news"])
 
-    # result_json = json.dumps(response_dict, ensure_ascii=False, indent=4)
-    # with open('./files/wsj_last_results.json', 'w', encoding='utf-8') as file:
-    #     file.write(result_json)
+        result_json = json.dumps(response_dict, ensure_ascii=False, indent=4)
+        with open('./files/wsj_last_results.json', 'w', encoding='utf-8') as file:
+            file.write(result_json)
+
+    except Exception as e:
+        print("ERROR - ", e)
