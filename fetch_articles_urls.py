@@ -6,10 +6,11 @@ v.2023-09-23
 import hashlib
 import json  # noqa
 import os
+from urllib.parse import urlparse
 
 import feedparser
-from urllib.parse import urlparse
 from dotenv import load_dotenv
+from requests.exceptions import RequestException
 
 from src._drv_mongodb import MongoCnx
 from src._drv_scrapers import CustomRequests
@@ -61,12 +62,12 @@ def request_bing_news_urls(session, query, category=None, results_count=100, fre
         "Ocp-Apim-Subscription-Key": bing_apikey
     }
 
-    # Make the API request
-    response = session.get(endpoint, params=params, headers=headers)
+    try:
+        # Make the API request
+        response = session.get(endpoint, params=params, headers=headers)
+        response.raise_for_status()
 
-    if response.status_code == 200:
         response_data = response.json()
-
         results = []
         all_links = []
 
@@ -85,8 +86,8 @@ def request_bing_news_urls(session, query, category=None, results_count=100, fre
                 "source": "Bing",
                 "domain": domain,
             }
-            results.append(extracted_entry)
 
+            results.append(extracted_entry)
             all_links.append(value.get("url", ""))
 
         # Create a dictionary for the extracted data
@@ -95,6 +96,10 @@ def request_bing_news_urls(session, query, category=None, results_count=100, fre
         print(f"INFO  - Found {len(all_links)} urls with given parameters")
 
         return result_dict, all_links  # Return both the JSON and the list of entry.link values
+
+    except RequestException as e:
+        print(f"ERROR - An error occurred during the API request: {e}")
+        return None, []
 
 
 def extract_rss_article_urls(rss_feed_urls):
@@ -111,57 +116,63 @@ def extract_rss_article_urls(rss_feed_urls):
     """
     print(f"\nINFO  - Quering {len(rss_feed_urls)} RSS feeds for article urls")
 
-    # Loop through the list of feed URLs
+    # Initialize lists to store data
     all_entries = []
-    all_links = []  # Initialize a list to store entry.link values
+    all_links = []
 
-    for rss_feed_url in rss_feed_urls:
-        # Parse the RSS feed
-        feed = feedparser.parse(rss_feed_url)
+    try:
+        for rss_feed_url in rss_feed_urls:
+            # Parse the RSS feed
+            feed = feedparser.parse(rss_feed_url)
 
-        # Append the feed data to the list
-        all_entries.extend(feed.entries)
+            if feed.get("entries"):
+                # Append the feed data to the list
+                all_entries.extend(feed.entries)
 
-        # Extract and append entry.link values to the list
-        all_links.extend([entry.get("link", "") for entry in feed.entries])
+                # Extract and append entry.link values to the list
+                all_links.extend([entry.get("link", "") for entry in feed.entries])
 
-    extracted_data = []
+        extracted_data = []
 
-    for entry in all_entries:
-        url = entry.get("link", "")
-        url_hash = hashlib.md5(url.encode()).hexdigest()
-        parsed_url = urlparse(url)
-        domain = parsed_url.netloc
+        for entry in all_entries:
+            url = entry.get("link", "")
+            url_hash = hashlib.md5(url.encode()).hexdigest()
+            parsed_url = urlparse(url)
+            domain = parsed_url.netloc
 
-        extracted_entry = {
-            "_id": url_hash,
-            "url": url,
-            "title": entry.get("title", ""),
-            "summary": entry.get("summary", ""),
-            "publish_date": entry.get("published", ""),
-            "source": "WSJ",
-            "domain": domain,
-        }
-        extracted_data.append(extracted_entry)
+            extracted_entry = {
+                "_id": url_hash,
+                "url": url,
+                "title": entry.get("title", ""),
+                "summary": entry.get("summary", ""),
+                "publish_date": entry.get("published", ""),
+                "source": "WSJ",
+                "domain": domain,
+            }
+            extracted_data.append(extracted_entry)
 
-    # Create a dictionary for the extracted data
-    result_dict = {"news": extracted_data}
+        # Create a dictionary for the extracted data
+        result_dict = {"news": extracted_data}
 
-    print(f"INFO  - Found {len(all_links)} urls on given RSS feeds")
+        print(f"INFO  - Found {len(all_links)} URLs in the given RSS feeds")
 
-    return result_dict, all_links  # Return both the JSON and the list of entry.link values
+        return result_dict, all_links  # Return both the JSON and the list of entry.link values
+
+    except Exception as e:
+        print(f"ERROR - An error occurred while processing RSS feeds: {e}")
+        return None, []
 
 
 if __name__ == "__main__":
 
-    # FETCH URLS FROM BING API, UPDATE MONGODB
+    # 1. FETCH URLS FROM BING API, UPDATE MONGODB
     try:
         mongo_cnx = MongoCnx("news_db")
-        collection = mongo_cnx.db["keywords"]
 
-        query_result = collection.find({"active": True})
-        keywords = [document["keyword"] for document in query_result]
-        print("DEBUG - ", keywords)
+        # Query keywords search list, loop `request_bing_news_urls()`
+        collection = mongo_cnx.db["keywords"]
+        keywords = collection.distinct("keyword", {"active": True})
+        # print("DEBUG - ", keywords)
 
         handler = CustomRequests(username=proxy_username, password=proxy_password,
                                  endpoint=proxy_server, port=proxy_port)
@@ -172,17 +183,28 @@ if __name__ == "__main__":
             response_dict, _ = request_bing_news_urls(session, keyword, results_count=100, freshness="month")
             all_results_dict['news'].extend(response_dict['news'])
 
-        mongo_cnx.update_collection("news", all_results_dict["news"])
-
         result_json = json.dumps(all_results_dict, ensure_ascii=False, indent=4)
         with open('./files/bing_last_results.json', 'w', encoding='utf-8') as file:
             file.write(result_json)
 
+        # Query active 'domains' on mongodb 'news_db.selectors', filter delete articles if not in list
+        collection = mongo_cnx.db["selectors"]
+        allowed_domains = collection.distinct("domain", {"active": True})
+        print("DEBUG - allowed_domains: ", allowed_domains)
+
+        all_results_dict['news'] = [item for item in all_results_dict['news'] if item['domain'] in allowed_domains]
+
+        # Upsert final list on mongodb 'news_db.news'
+        mongo_cnx.update_collection("news", all_results_dict["news"])
+
     except Exception as e:
         print("ERROR - ", e)
 
-    # FETCH URLS FROM WSJ RSS FEEDS, UPDATE MONGODB
+    # 2. FETCH URLS FROM WSJ RSS FEEDS, UPDATE MONGODB
     try:
+        mongo_cnx = MongoCnx("news_db")
+
+        # List RSS feeds, loop `extract_rss_article_urls()`
         rss_feed_urls = [
             "https://feeds.a.dj.com/rss/RSSOpinion.xml",
             "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
@@ -194,12 +216,13 @@ if __name__ == "__main__":
 
         response_dict, all_links = extract_rss_article_urls(rss_feed_urls)
 
-        mongo_cnx = MongoCnx("news_db")
-        mongo_cnx.update_collection("news", response_dict["news"])
-
         result_json = json.dumps(response_dict, ensure_ascii=False, indent=4)
         with open('./files/wsj_last_results.json', 'w', encoding='utf-8') as file:
             file.write(result_json)
+
+        # Since all come from WSJ do not filter delete
+        # Upsert final list on mongodb 'news_db.news'
+        mongo_cnx.update_collection("news", response_dict["news"])
 
     except Exception as e:
         print("ERROR - ", e)
