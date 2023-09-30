@@ -27,7 +27,7 @@ wsj_password = os.getenv('WSJ_PASSWORD')
 bing_apikey = os.getenv('BING_APIKEY')
 # print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
 
-files_path = "./files"
+files_path = "./news_data"
 
 if not os.path.exists(files_path):
     os.makedirs(files_path)
@@ -204,7 +204,7 @@ if __name__ == "__main__":
             all_results_dict['news'].extend(response_dict['news'])
 
         result_json = json.dumps(all_results_dict, ensure_ascii=False, indent=4)
-        with open('./files/bing_last_results.json', 'w', encoding='utf-8') as file:
+        with open(f'./{files_path}/bing_last_results.json', 'w', encoding='utf-8') as file:
             file.write(result_json)
 
         # Query active 'domains' on mongodb 'news_db.selectors', filter delete articles if not in list
@@ -237,7 +237,7 @@ if __name__ == "__main__":
         response_dict, all_links = extract_rss_article_urls(rss_feed_urls)
 
         result_json = json.dumps(response_dict, ensure_ascii=False, indent=4)
-        with open('./files/wsj_last_results.json', 'w', encoding='utf-8') as file:
+        with open(f'./{files_path}/wsj_last_results.json', 'w', encoding='utf-8') as file:
             file.write(result_json)
 
         # Since all come from WSJ do not filter delete
