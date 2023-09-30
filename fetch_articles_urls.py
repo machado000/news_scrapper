@@ -6,6 +6,7 @@ v.2023-09-23
 import hashlib
 import json  # noqa
 import os
+import pendulum
 from urllib.parse import urlparse
 
 import feedparser
@@ -30,6 +31,19 @@ files_path = "./files"
 
 if not os.path.exists(files_path):
     os.makedirs(files_path)
+
+
+def convert_to_iso_date_string(input_date, output_timezone='UTC'):
+    try:
+        parsed_date = pendulum.from_format(input_date, 'ddd, DD MMM YYYY HH:mm:ss ZZ')
+        converted_date = parsed_date.in_tz(output_timezone)
+        formatted_date = converted_date.to_iso8601_string()
+
+        return formatted_date
+
+    except ValueError:
+        print("ERROR - Invalid datetime string passed as input")
+        return None
 
 
 def request_bing_news_urls(session, query, category=None, results_count=100, freshness="day"):
@@ -135,17 +149,23 @@ def extract_rss_article_urls(rss_feed_urls):
         extracted_data = []
 
         for entry in all_entries:
+            # Extract MD5 hash (_id) and domain from article url
             url = entry.get("link", "")
             url_hash = hashlib.md5(url.encode()).hexdigest()
             parsed_url = urlparse(url)
             domain = parsed_url.netloc
 
+            # Convert date from 'Sat, 30 Sep 2023 02:33:34 -0400' inti ISO format
+            pubDdate = entry.get("published", "")
+            published_date = convert_to_iso_date_string(pubDdate)
+
+            # Extract article data
             extracted_entry = {
                 "_id": url_hash,
                 "url": url,
                 "title": entry.get("title", ""),
                 "summary": entry.get("summary", ""),
-                "publish_date": entry.get("published", ""),
+                "publish_date": published_date,
                 "source": "WSJ",
                 "domain": domain,
             }
