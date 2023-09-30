@@ -19,9 +19,8 @@ class MongoCnx():
         username = os.getenv('MONGODB_USER')
         password = os.getenv('MONGODB_PASSWORD')
         hostname = "10.109.222.5"
-
-        database = database
         # port = "27017"
+        self.database_name = database
 
         uri = f"mongodb://{username}:{password}@{hostname}/{database}"
 
@@ -59,7 +58,7 @@ class MongoCnx():
 
         print(
             f"INFO  - Inserted {new_documents_count}, updated {updated_documents_count} documents \
-on collection '{collection.name}'")
+into '{self.db.name}' collection '{collection.name}'")
 
         return None
 
