@@ -1,6 +1,7 @@
 feedparser
 openai
 pandas
+pendulum
 pymongo
 python-dotenv
 requests
