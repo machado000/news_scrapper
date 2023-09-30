@@ -26,13 +26,13 @@ class MongoCnx():
         self.client = MongoClient(uri)
         self.db = self.client[database]  # Get the database here
 
-    def update_collection(self, collection, document_list):
+    def update_collection(self, collection_name, document_list):
         """
         Upsert documents into Mongodb collection. Overwrite existing documents with same `id`
 
         Args:
         - database (str): The Mongodb database name. Credentials are hard coded into .env variables.
-        - collection (str): The Mongodb collection name.
+        - collection_name (str): The Mongodb collection name.
         - document_list (list): List of dict objects to be updated as documents on collection
 
         Returns:
@@ -40,7 +40,7 @@ class MongoCnx():
         """
         try:
             # Upload results to Mongodb, overwrite duplicates
-            collection = self.db[collection]
+            collection = self.db[collection_name]
 
             new_documents_count = 0
             updated_documents_count = 0
