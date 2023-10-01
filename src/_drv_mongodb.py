@@ -65,7 +65,7 @@ into '{self.db.name}' collection '{collection.name}'")
             print("ERROR - Failure querying MongoDB: ", e)
             raise PyMongoError
 
-    def get_docs_by_domain_and_date(self, collection_name, domain, start_datetime):
+    def get_docs_by_domain_and_date(self, collection_name, domain, start_datetime, summarized=False):
         """
         Retrieve documents from given domain with a publish date after the given date.
 
@@ -73,22 +73,26 @@ into '{self.db.name}' collection '{collection.name}'")
             collection_name (str): The name of the collection to query.
             domain (str): The domain to filter articles by.
             start_datetime (str): The minimum publish date for articles in ISO 8601 format.
+            summarized (boolean): Document status.
 
         Returns:
             list: A list of matching articles as dictionaries.
         """
         try:
+            summarized_filter_value = True if summarized else {"$in": [False, None]}
 
             # Define the query
             query = {
                 "domain": domain,
                 "publish_date": {"$gte": start_datetime},
+                "summarized": summarized_filter_value,
             }
             projection = {
                 "_id": 1,
                 "publish_date": 1,
                 "domain": 1,
                 "url": 1,
+                "summarized": 1,
             }
             sort_parameter = [("publish_date", 1)]
 
