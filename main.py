@@ -2,19 +2,20 @@
 news_scrapper
 v.2023-09-23
 '''
-
-# import codecs
 import json
 import os
+from time import sleep
 
-import feedparser
 import openai
-from bs4 import BeautifulSoup  # noqa
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys  # noqa
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-from src._drv_scrapers import CustomRequests, CustomWebDriver   # noqa
+from src._drv_mongodb import MongoCnx
+from src._drv_scrapers import CustomRequests, CustomWebDriver
 
 # Load variables from .env
 load_dotenv()
@@ -26,105 +27,14 @@ wsj_username = os.getenv('WSJ_USERNAME')
 wsj_password = os.getenv('WSJ_PASSWORD')
 bing_apikey = os.getenv('BING_APIKEY')
 openai_apikey = os.getenv('OPENAI_APIKEY')
-# print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
-
-files_path = "./files"
-
-if not os.path.exists(files_path):
-    os.makedirs(files_path)
+# print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
 
 
-def request_bing_news(session, query, category="Business", results_count=100, freshness="day"):
-
-    url = "https://api.bing.microsoft.com/v7.0/news/search"
-
-    params = {
-        "q": query,
-        "category": category,
-        "count": results_count,
-        "freshness": freshness,
-        "mkt": "en-US",
-        "setLang": "en"
-    }
-
-    headers = {
-        "Ocp-Apim-Subscription-Key": bing_apikey
-    }
-
-    # Make the API request
-    response = session.get(url, params=params, headers=headers)
-
-    if response.status_code == 200:
-        response_data = response.json()
-
-        results = []
-        all_links = []
-
-        for value in response_data["value"]:
-            extracted_entry = {
-                "title": value.get("name", ""),
-                "link": value.get("url", ""),
-                "summary": value.get("description", ""),
-                "published": value.get("datePublished", ""),
-            }
-            results.append(extracted_entry)
-
-            all_links.append(value.get("url", ""))
-
-        # Create a dictionary for the extracted data
-        result_dict = {"articles": results}
-
-        # Convert the dictionary to a JSON string
-        result_json = json.dumps(result_dict, indent=4)
-
-        return result_json, all_links  # Return both the JSON and the list of entry.link values
-
-
-def extract_rss_article_data(rss_feed_urls):
-    """
-    Extracts article data from a list of RSS feed URLs.
-
-    Args:
-    - rss_feed_urls (list): List of RSS feed URLs.
-
-    Returns:
-    - tuple: A tuple containing:
-        - str: JSON-formatted string containing extracted article data.
-        - list: List of all 'entry.link' values.
-    """
-    # Loop through the list of feed URLs
-    all_entries = []
-    all_links = []  # Initialize a list to store entry.link values
-
-    for rss_feed_url in rss_feed_urls:
-        # Parse the RSS feed
-        feed = feedparser.parse(rss_feed_url)
-
-        # Append the feed data to the list
-        all_entries.extend(feed.entries)
-
-        # Extract and append entry.link values to the list
-        all_links.extend([entry.get("link", "") for entry in feed.entries])
-
-    extracted_data = []
-
-    for entry in all_entries:
-        extracted_entry = {
-            "title": entry.get("title", ""),
-            "link": entry.get("link", ""),
-            "summary": entry.get("summary", ""),
-            "published": entry.get("published", ""),
-            "id": entry.get("id", "")
-        }
-        extracted_data.append(extracted_entry)
-
-    # Create a dictionary for the extracted data
-    result_dict = {"articles": extracted_data}
-
-    # Convert the dictionary to a JSON string
-    result_json = json.dumps(result_dict, ensure_ascii=False, indent=4)
-
-    return result_json, all_links  # Return both the JSON and the list of entry.link values
+def get_redirected_url(url):
+    custom_requests = CustomRequests(proxy_username, proxy_password, proxy_server, proxy_port)
+    response = custom_requests.get_response(url)
+    redirected_url = response.url
+    return redirected_url
 
 
 def login_wsj(driver):
@@ -132,7 +42,7 @@ def login_wsj(driver):
     Login to https://session.wsj.com and parse username and passord.
 
     Args:
-    - Selenium Chrome webdriver object.
+    - driver (object) Selenium Chromium webdriver object.
 
     Returns:
     - None.
@@ -144,157 +54,221 @@ def login_wsj(driver):
     password = wsj_password
 
     print(f"INFO  - Navigating to {login_url}")
+    driver.get(login_url)
+
     try:
-        driver.get(login_url)
-        print("INFO  - [Success]")
-    except Exception as e:
-        print(f"ERROR - Error navigating to {login_url}: ", e)
-        raise Exception
+        element_present = EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'button[type="button"].solid-button.continue-submit.new-design'))
+        WebDriverWait(driver=driver, timeout=20).until(element_present)
+        print("INFO  - Page fully loaded!")
+    except TimeoutException:
+        print("ERROR - Timed out waiting for page to load")
 
     # First screen
     username_field = driver.find_element(By.ID, "username")
     username_field.send_keys(username)
 
-    continue_button = driver.find_element(By.CSS_SELECTOR, 'button[type="button"].solid-button.continue-submit.new-design')  # noqa
+    continue_button = driver.find_element(
+        By.CSS_SELECTOR, 'button[type="button"].solid-button.continue-submit.new-design')
     continue_button.click()
 
     # Second screen
+    sleep(2)
     password_field = driver.find_element(By.ID, "password-login-password")
     password_field.send_keys(password)
 
-    login_button = driver.find_element(By.CSS_SELECTOR, 'button[type="submit"].solid-button.new-design.basic-login-submit')  # noqa
+    login_button = driver.find_element(
+        By.CSS_SELECTOR, 'button[type="submit"].solid-button.new-design.basic-login-submit')
     login_button.click()
+
+    try:
+        element_present = EC.presence_of_element_located(
+            (By.CSS_SELECTOR, 'div.sc-dIfARi.kNNa-dS button.btn.btn--primary[type="button"]'))
+        WebDriverWait(driver=driver, timeout=40).until(element_present)
+        print("INFO  - Button 'SIGN OUT' was found on page \nINFO  - Login with success !")
+    except TimeoutException:
+        print("ERROR - Timed out waiting for page to load")
+    except NoSuchElementException:
+        print("ERROR - Button 'SIGN OUT' not found on page")
 
     return None
 
 
-def fetch_page_source(driver, url):
+def fetch_page_soup(driver, url):
     """
     Navigate to a url and fetch page_source.
 
     Args:
-    - Selenium Chrome webdriver object.
-    - Url to be saved
+    - driver (object) Selenium Chrome webdriver object.
+    - url (str) URL to be saved
 
     Returns:
     - HTML page content.
     """
-    print(f"INFO  - Navigating to {url}")
     try:
+        print(f"INFO  - Navigating to {url}")
         driver.get(url)
-        print("INFO  - [Success]")
-    except Exception as e:
-        print(f"ERROR - Error navigating to {url}: ", e)
+
+        body_element = EC.presence_of_element_located((By.TAG_NAME, "body"))
+        WebDriverWait(driver, 20).until(body_element)
+        print("INFO  - Page <body> was loaded!")
+
+        # Parse the HTML content of the page using BeautifulSoup
+        page_source = driver.page_source
+        soup = BeautifulSoup(page_source, 'html.parser')
+
+        if soup:
+            print("INFO  - Fetched BeautifulSoup HTML content")
+
+        return soup
+
+    except TimeoutException:
+        print("ERROR - Timed out waiting for page to load")
         raise Exception
 
-    # Parse the HTML content of the page using BeautifulSoup
-    page_source = driver.page_source
 
-    return page_source
+def fetch_article_text(soup, domain):
+    # Extract TXT from article body
+    collection = mongo_cnx.db["selectors"]
+    selector_parameters = collection.find_one({"domain": domain})
+    # print("DEBUG - selector: ", selector["element"])
+
+    if selector_parameters["selector"] == "element":
+        article_body = soup.find(selector["element"])
+
+    if selector_parameters["selector"] == "class":
+        article_body = soup.find(selector["element"])
+
+    article_body_text = article_body.text
+
+    return article_body_text
+
+
+def openai_summarize_text(input_text):
+    try:
+        print("INFO  - Querying OpenAI for article text summary.")
+
+        openai.api_key = os.getenv('OPENAI_APIKEY')
+
+        system_prompt = "Use a style suitable for business reports. Direct text to investors and business analysts. Write a single text block with no linkebreaks."  # noqa
+        user_prompt_1 = f"Compose a 150-word summary of the following news article text: '{input_text}'"  # noqa
+
+        response_1 = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt_1}
+            ],
+            temperature=0.5,
+            max_tokens=300,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0,
+        )
+        # print("DEBUG - ", response_1)
+        summary = response_1['choices'][0]['message']['content']
+
+        # # Make a second API request
+        # user_prompt_2 = "Now generate keywords related to the subject of this same news article."
+
+        # response_2 = openai.ChatCompletion.create(
+        #     model="gpt-3.5-turbo",
+        #     messages=[
+        #         {"role": "user", "content": user_prompt_2}
+        #     ],
+        #     temperature=0.5,
+        #     max_tokens=150,
+        #     top_p=1,
+        #     frequency_penalty=0,
+        #     presence_penalty=0
+        # )
+        # print("DEBUG - ", response_2)
+        # keywords = response_2['choices'][0]['message']['content']
+
+        if summary:
+            print(f"INFO  - Response: '{summary[:100]}...'")
+
+        return summary
+
+    except Exception as e:
+        print("ERROR - ", e)
+        raise Exception
 
 
 if __name__ == "__main__":
 
-    try:
-        """
-        A-1. Fetch urls from RSS feeds
-        """
-        rss_feed_urls = [
-            "https://feeds.a.dj.com/rss/RSSOpinion.xml",
-            "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
-            "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
-            "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
-            "https://feeds.a.dj.com/rss/RSSWSJD.xml",
-            "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
-        ]
+    # 0. Initial settings
+    files_path = "./news_data"
+    if not os.path.exists(files_path):
+        os.makedirs(files_path)
 
-        result_json, all_links = extract_rss_article_data(rss_feed_urls)
+    mongo_cnx = MongoCnx("news_db")
 
-        # Save the JSON to a file
-        with open('./files/rss_feed.json', 'w', encoding='utf-8') as file:
-            file.write(result_json)
+    # 1. list articles to be scraped
+    collection_name = "news"
+    domain = "www.wsj.com"
+    start_date = "2022-01-01T00:00"
 
-        print(all_links[0])
+    articles = mongo_cnx.get_docs_by_domain_and_date(collection_name, domain, start_date, summarized=False)
+    print("INFO  - Last document: ", articles[-3:])
 
-    #     """
-    #     A-2. Open Selenium Chrome webdriver and login to WSJ
-    #     """
-    #     handler = CustomWebDriver(username=proxy_username, password=proxy_password,
-    #                               endpoint=proxy_server, port=proxy_port)
-    #     driver = handler.open_driver()
-    #     driver.implicitly_wait(3)  # Adjust the wait time as needed
+    # 2. Start Selenium Chrome Webdriver
+    handler = CustomWebDriver(username=proxy_username, password=proxy_password,
+                              endpoint=proxy_server, port=proxy_port)
+    driver = handler.open_driver()
 
-    #     login_wsj(driver)
+    # 3-A. Login to Wall Street (Journal WSJ)
+    login_wsj(driver)
 
-    #     """
-    #     A-3. Fetch and save page HTML source
-    #     """
-    #     # Fetch article text
-    #     # url = "https://www.wsj.com/articles/ipo-market-arm-instacart-klaviyo-stocks-ee65206?mod=rss_markets_main"
-    #     url = all_links[0]
+    # 3-B. Fetch and save page HTML soup and article_body.text, generate article summary with OpenAI
+    articles_summaries = []
+    total_count = len(articles)
 
-    #     page_source = fetch_page_source(driver, url)  # DEBUG check page_source.html
+    for idx, item in enumerate(articles, start=1):
+        try:
+            soup = fetch_page_soup(driver, item["url"])
 
-    #     # Parse the HTML content with BeautifulSoup
-    #     soup = BeautifulSoup(page_source, 'html.parser')
+            # Save local HTML file
+            html_file_path = f"./{files_path}/{item['_id']}.html"
+            with open(html_file_path, "w", encoding="utf-8") as file:
+                file.write(soup.prettify())
 
-    #     with open('./files/page_source.html', 'w', encoding="utf-8") as file:
-    #         file.write(soup.prettify())
+            # Extract TXT from article body
+            collection = mongo_cnx.db["selectors"]
+            selector = collection.find_one({"domain": item['domain']})
+            # print("DEBUG - selector: ", selector["element"])
 
-    #     # Close the driver when done
-    #     driver.quit()
+            if selector["selector"] == "element":
+                article_body = soup.find(selector["element"])
 
-    #     """
-    #     A-4. Extract article text from page HTML source
-    #     """
-    #     # TODO
+            article_body_text = article_body.text
 
-    except Exception as e:
-        print("ERROR - ", e)
+            # Save local TXT file
+            txt_file_path = f"./{files_path}/{item['_id']}.txt"
+            with open(txt_file_path, "w", encoding="utf-8") as file:
+                file.write(article_body_text)
 
-    """
-    B-1. Fetch urls from Bing API
-    """
-    handler = CustomRequests(username=proxy_username, password=proxy_password, endpoint=proxy_server, port=proxy_port)
-    session = handler.session
-    soup = handler.fetch_soup("https://ipinfo.io/ip")
-    print(f"INFO  - Success opening session with proxy ip '{soup.text}'")
+            # Send article text to openai and fetch summary
+            summary = openai_summarize_text(article_body.text)
 
-    query = '"Activist investor" | "Carl Icahn" | "corporate governance" | "universal proxy" | "13D Monitor" | "Schedule 13D"'  # noqa
+            summary_entry = {
+                "_id": item['_id'],
+                "openai_summary": summary,
+                "summarized": True,
+            }
 
-    response_json, all_links = request_bing_news(session, query, results_count=100, freshness="month")
+            articles_summaries.append(summary_entry)
+            print(f"INFO  - {idx}/{total_count} articles fetched and summarized.")
 
-    with open('./files/bing_news_results.json', 'w', encoding='utf-8') as file:
-        file.write(response_json)
+        except Exception as e:
+            print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
+            continue  # Continue to the next item in case of an error
 
-    # print(response_json)
-    print(all_links[0:3])
+    with open(f"./{files_path}/articles_summaries.json", "w", encoding="utf-8") as json_file:
+        json.dump(articles_summaries, json_file)
 
-    """
-    5. Send article text to openai and fetch summary
-    """
-    api_key = openai_apikey
-    file_path = './files/article.txt'
+    # 4. Update Mongodb with new article summaries
+    mongo_cnx.update_collection("news", articles_summaries)
 
-    with open(file_path, 'r', encoding='utf-8') as file:
-        input_text = file.read()
-
-    # print(input_text) # DEBUG
-
-    prompt = f"Using a style suitable for business reports compose a 200-word summary of the following text:\n{input_text}."  # noqa
-
-    response = openai.Completion.create(
-        engine="text-davinci-003",
-        prompt=prompt,
-        max_tokens=400,  # Adjust max_tokens for the desired length of the summary
-        api_key=api_key
-    )
-
-    # print(response)  # DEBUG
-
-    # Extract the generated summary and keywords
-    summary = response.choices[0].text.strip()
-
-    # Print the summary and keywords
-    print("Summary:")
-    print(summary)
+    # Close the driver when done
+    # driver.quit()
