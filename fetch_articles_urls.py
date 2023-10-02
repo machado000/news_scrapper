@@ -93,12 +93,13 @@ def request_bing_news_urls(session, query, category=None, results_count=100, fre
 
             extracted_entry = {
                 "_id": url_hash,
-                "url": url,
-                "title": value.get("name", ""),
-                "summary": value.get("description", ""),
+                "category": value.get("category", ""),
+                "domain": domain,
                 "publish_date": value.get("datePublished", ""),
                 "source": "Bing",
-                "domain": domain,
+                "title": value.get("name", ""),
+                "url": url,
+                "article_status": "fetched",
             }
 
             results.append(extracted_entry)
@@ -162,12 +163,13 @@ def extract_rss_article_urls(rss_feed_urls):
             # Extract article data
             extracted_entry = {
                 "_id": url_hash,
-                "url": url,
-                "title": entry.get("title", ""),
-                "summary": entry.get("summary", ""),
+                "category": entry.get("wsj_articletype", ""),
+                "domain": domain,
                 "publish_date": published_date,
                 "source": "WSJ",
-                "domain": domain,
+                "title": entry.get("title", ""),
+                "url": url,
+                "article_status": "fetched",
             }
             extracted_data.append(extracted_entry)
 
