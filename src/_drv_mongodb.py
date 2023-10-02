@@ -5,9 +5,10 @@ v.2023-07-29
 """
 import os
 
+import pendulum
 from dotenv import load_dotenv
-from pymongo.mongo_client import MongoClient
 from pymongo.errors import PyMongoError
+from pymongo.mongo_client import MongoClient
 
 
 class MongoCnx():
@@ -47,7 +48,15 @@ class MongoCnx():
 
             for document in document_list:
                 filter_condition = {"_id": document["_id"]}
-                update_data = {"$set": document}
+                if 'publish_date' in document:
+                    # Convert the 'publish_date' string to a Python datetime object
+                    parsed_date = pendulum.parse(document['publish_date'])
+                    document['publish_date'] = parsed_date
+
+                update_data = {
+                    "$set": document,
+                    "$currentDate": {'lastmodified': {"$type": 'date'}}
+                }
                 update_result = collection.update_one(filter_condition, update_data, upsert=True)
 
                 # Check if the document was updated or inserted
