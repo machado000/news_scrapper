@@ -46,7 +46,7 @@ def convert_to_iso_date_string(input_date, output_timezone='UTC'):
         return None
 
 
-def request_bing_news_urls(session, query, category=None, results_count=100, freshness="day"):
+def request_bing_news_urls(session, query, results_count=100, freshness="day"):
     """
     Query Bing News API for news article urls.
 
@@ -99,7 +99,7 @@ def request_bing_news_urls(session, query, category=None, results_count=100, fre
                 "source": "Bing",
                 "title": value.get("name", ""),
                 "url": url,
-                "article_status": "fetched",
+                "status": "fetched",
             }
 
             results.append(extracted_entry)
@@ -169,7 +169,7 @@ def extract_rss_article_urls(rss_feed_urls):
                 "source": "WSJ",
                 "title": entry.get("title", ""),
                 "url": url,
-                "article_status": "fetched",
+                "status": "fetched",
             }
             extracted_data.append(extracted_entry)
 
@@ -202,7 +202,8 @@ if __name__ == "__main__":
         all_results_dict = {'news': []}
 
         for keyword in keywords:
-            response_dict, _ = request_bing_news_urls(session, keyword, results_count=100, freshness="month")
+            response_dict, _ = request_bing_news_urls(
+                session=session, query=keyword, results_count=100, freshness="day")
             all_results_dict['news'].extend(response_dict['news'])
 
         result_json = json.dumps(all_results_dict, ensure_ascii=False, indent=4)
