@@ -218,7 +218,7 @@ if __name__ == "__main__":
         all_results_dict['news'] = [item for item in all_results_dict['news'] if item['domain'] in allowed_domains]
 
         # Upsert final list on mongodb 'news_db.news'
-        mongo_cnx.update_collection("news", all_results_dict["news"])
+        mongo_cnx.insert_documents("news", all_results_dict["news"])
 
     except Exception as e:
         print("ERROR - ", e)
@@ -245,7 +245,7 @@ if __name__ == "__main__":
 
         # Since all come from WSJ do not filter delete
         # Upsert final list on mongodb 'news_db.news'
-        mongo_cnx.update_collection("news", response_dict["news"])
+        mongo_cnx.insert_documents("news", response_dict["news"])
 
     except Exception as e:
         print("ERROR - ", e)
