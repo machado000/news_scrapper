@@ -4,6 +4,7 @@ v.2023-09-23
 '''
 import json
 import os
+import sys
 from time import sleep
 
 from datetime import datetime
@@ -163,8 +164,14 @@ if __name__ == "__main__":
     domain = "www.wsj.com"
     start_date = datetime(2023, 10, 1, 12, 00)
     status = "fetched"
-    articles = mongo_cnx.get_doc_list(collection_name, domain, start_date, status)
-    print("INFO  - Last document: ", articles[-1:])
+    articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
+                                      start_publish_date=start_date, status=status)
+
+    if articles == []:
+        print("INFO  - Exiting program. No documents where found.")
+        sys.exit()
+
+    print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
 
     # 2. Start Selenium Chrome Webdriver
     handler = CustomWebDriver(username=proxy_username, password=proxy_password,
@@ -218,4 +225,4 @@ if __name__ == "__main__":
     mongo_cnx.update_collection("news", articles_contents)
 
     # Close the driver when done
-    # driver.quit()
+    driver.quit()
