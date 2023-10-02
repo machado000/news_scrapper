@@ -6,6 +6,7 @@ v.2023-07-29
 import os
 
 import pendulum
+from datetime import datetime, date
 from dotenv import load_dotenv
 from pymongo.errors import PyMongoError
 from pymongo.mongo_client import MongoClient
@@ -55,7 +56,7 @@ class MongoCnx():
 
                 update_data = {
                     "$set": document,
-                    "$currentDate": {'lastmodified': {"$type": 'date'}}
+                    "$currentDate": {'last_modified': {"$type": 'date'}}
                 }
                 update_result = collection.update_one(filter_condition, update_data, upsert=True)
 
@@ -74,34 +75,39 @@ into '{self.db.name}' collection '{collection.name}'")
             print("ERROR - Failure querying MongoDB: ", e)
             raise PyMongoError
 
-    def get_docs_by_domain_and_date(self, collection_name, domain, start_datetime, summarized=False):
+    def get_doc_list(self, collection_name, domain=None, start_datetime=None, status=None):
         """
-        Retrieve documents from given domain with a publish date after the given date.
+        Retrieve document list from given domain and publish date.
 
         Args:
             collection_name (str): The name of the collection to query.
             domain (str): The domain to filter articles by.
-            start_datetime (str): The minimum publish date for articles in ISO 8601 format.
-            summarized (boolean): Document status.
+            start_datetime (datetime object): The minimum publish date as datetime object or string in ISO-8601 format.
+            status (str): Document status like 'fetched', 'content_parsed', 'summarized', 'matched', 'email_sent'.
 
         Returns:
             list: A list of matching articles as dictionaries.
         """
         try:
-            summarized_filter_value = True if summarized else {"$in": [False, None]}
-
             # Define the query
-            query = {
-                "domain": domain,
-                "publish_date": {"$gte": start_datetime},
-                "summarized": summarized_filter_value,
-            }
+            query = {}
+            if domain is not None:
+                query["domain"] = domain
+
+            if start_datetime is not None:
+                parsed_date = start_datetime if isinstance(
+                    start_datetime, (date, datetime)) else pendulum.parse(start_datetime)
+                query["publish_date"] = {"$gte": parsed_date}
+
+            if status is not None:
+                query["status"] = status
+
             projection = {
                 "_id": 1,
                 "publish_date": 1,
                 "domain": 1,
                 "url": 1,
-                "summarized": 1,
+                "status": 1,
             }
             sort_parameter = [("publish_date", 1)]
 
@@ -112,7 +118,56 @@ into '{self.db.name}' collection '{collection.name}'")
             # Convert query result to a list of dictionaries
             documents = [document for document in query_result]
 
-            print(f"INFO  - Returned {len(documents)} urls from '{domain}' after '{start_datetime}'")
+            print(f"INFO  - Returned {len(documents)} urls with domain '{domain}' and status '{status}'")
+            return documents
+
+        except PyMongoError as e:
+            print("ERROR - Failure querying MongoDB: ", e)
+            raise PyMongoError
+
+    def get_doc_content(self, collection_name, domain=None, start_datetime=None, status=None):
+        """
+        Retrieve document content from given domain and publish date.
+
+        Args:
+            collection_name (str): The name of the collection to query.
+            domain (str): The domain to filter articles by.
+            start_datetime (datetime object): The minimum publish date as datetime object or string in ISO-8601 format.
+            status (str): Document status like 'fetched', 'content_parsed', 'summarized', 'matched', 'email_sent'.
+
+        Returns:
+            list: A list of matching articles as dictionaries.
+        """
+        try:
+            # Define the query
+            query = {}
+            if domain is not None:
+                query["domain"] = domain
+
+            if start_datetime is not None:
+                parsed_date = start_datetime if isinstance(
+                    start_datetime, (date, datetime)) else pendulum.parse(start_datetime)
+                query["publish_date"] = {"$gte": parsed_date}
+
+            if status is not None:
+                query["status"] = status
+
+            projection = {
+                "_id": 1,
+                "publish_date": 1,
+                "content": 1,
+                "status": 1,
+            }
+            sort_parameter = [("publish_date", 1)]
+
+            # Find and sort the documents
+            collection = self.db[collection_name]
+            query_result = collection.find(query, projection).sort(sort_parameter)
+
+            # Convert query result to a list of dictionaries
+            documents = [document for document in query_result]
+
+            print(f"INFO  - Returned {len(documents)} documents with domain '{domain}' and status '{status}'")
             return documents
 
         except PyMongoError as e:
@@ -135,11 +190,19 @@ if __name__ == "__main__":
 
     collection = "news"
     domain = "www.wsj.com"
-    publish_date = "2023-09-28T12:00"
+    publish_date = datetime(2023, 10, 1, 12, 00)
+    status = "content_parsed"
 
-    documents = mongo_cnx.get_docs_by_domain_and_date(collection, domain, publish_date)
+    documents = mongo_cnx.get_doc_list(
+        collection_name=collection, domain=None, start_datetime=None, status=status)
 
-    for document in documents[0:2]:
+    for document in documents[-1:]:
+        print(document)
+
+    documents = mongo_cnx.get_doc_content(
+        collection_name=collection, domain=None, start_datetime=None, status=status)
+
+    for document in documents[-1:]:
         print(document)
 
     # Close the client connection when you're done
