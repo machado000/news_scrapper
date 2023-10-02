@@ -3,6 +3,7 @@ news_scrapper
 v.2023-09-23
 '''
 import json
+import sys
 import os
 from datetime import datetime  # noqa
 
@@ -84,6 +85,11 @@ if __name__ == "__main__":
     # start_date = datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"
     articles = mongo_cnx.get_doc_content(collection_name=collection_name, status=status)
+
+    if articles == []:
+        print("INFO  - Exiting program. No documents where found.")
+        sys.exit()
+
     print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
 
     # 3-B. Fetch and save page HTML soup and article_body.text, generate article summary with OpenAI
