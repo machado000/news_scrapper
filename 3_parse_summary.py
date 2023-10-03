@@ -1,6 +1,6 @@
 '''
 news_scrapper
-v.2023-09-23
+v.2023-10-02
 '''
 import json
 import sys
@@ -11,6 +11,7 @@ import openai
 from dotenv import load_dotenv
 
 from src._drv_mongodb import MongoCnx
+from src._decorators import retry
 
 # Load variables from .env
 load_dotenv()
@@ -18,6 +19,7 @@ openai_apikey = os.getenv('OPENAI_APIKEY')
 # print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
 
 
+@retry()
 def openai_summarize_text(input_text):
     try:
         print("INFO  - Querying OpenAI for article text summary.")
@@ -81,10 +83,11 @@ if __name__ == "__main__":
 
     # 1. list articles to be scraped
     collection_name = "news"
-    # domain = "www.wsj.com"
-    # start_date = datetime(2023, 10, 1, 12, 00)
+    domain = None
+    start_date = None  # datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"
-    articles = mongo_cnx.get_doc_content(collection_name=collection_name, status=status)
+    articles = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
+                                         start_publish_date=start_date, status=status)
 
     if articles == []:
         print("INFO  - Exiting program. No documents where found.")
@@ -115,8 +118,12 @@ if __name__ == "__main__":
             print(f"ERROR - {idx}/{total_count} - Error fetching summary for document {item['_id']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"./{files_path}/articles_summaries.json", "w", encoding="utf-8") as json_file:
+    with open(f"{files_path}/articles_summaries.json", "w", encoding="utf-8") as json_file:
         json.dump(articles_summaries, json_file)
 
     # 4. Update Mongodb with new article summaries
+    with open(f"{files_path}/articles_summaries.json", "r", encoding="utf-8") as json_file:
+        articles_contents = json.load(json_file)
+
+    mongo_cnx = MongoCnx("news_db")
     mongo_cnx.update_collection("news", articles_summaries)
