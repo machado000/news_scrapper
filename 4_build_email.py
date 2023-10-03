@@ -6,7 +6,7 @@ import json
 import os
 import smtplib
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
@@ -23,18 +23,16 @@ smtp_server = os.getenv('SMTP_SERVER')
 smtp_port = os.getenv('SMTP_PORT')
 # print("DEBUG - ", smtp_username, smtp_password, smtp_server, smtp_port) # noqa
 
+files_path = "./report_data"
+if not os.path.exists(files_path):
+    os.makedirs(files_path)
 
-if __name__ == "__main__":
 
+def build_report_payload(start_publish_date=None):
     # 0. Initial settings
-    files_path = "./report_data"
-    if not os.path.exists(files_path):
-        os.makedirs(files_path)
-
     mongo_cnx = MongoCnx("news_db")
 
     collection_name = "news"
-    start_publish_date = datetime(2023, 10, 1, 0, 0)
     status = "summarized"
 
     # 1. List keywords to be matched
@@ -45,7 +43,7 @@ if __name__ == "__main__":
 
     # 2. Match and update document statuses
     matches = mongo_cnx.match_doc_with_keywords(
-        collection_name, start_publish_date=None, status=status, keyword_list=keyword_list)
+        collection_name, start_publish_date=start_publish_date, status=status, keyword_list=keyword_list)
     print(matches)
 
     mongo_cnx.update_collection("news", matches)
@@ -66,7 +64,7 @@ if __name__ == "__main__":
 
             item["domain"] = item["domain"].replace("www.", "")
 
-        with open(f"{files_path}/email_payload.json", "w", encoding="utf-8") as json_file:
+        with open(f"{files_path}/report_payload.json", "w", encoding="utf-8") as json_file:
             json.dump(payload, json_file)
         print(f"INFO  - Payload saved on \'{files_path}/email_payload.json\'.")
 
@@ -74,13 +72,11 @@ if __name__ == "__main__":
         print("INFO  - Exiting program. There is no articles that match given settings.")
         sys.exit()
 
+    return payload
+
+
+def send_email_report(report_payload_json):
     # 4. Generate Jinja2 report template
-
-    # Load JSON data
-    with open(f"{files_path}/email_payload.json", "r", encoding="utf-8") as json_file:
-        report_data = json.load(json_file)
-    print("DEBUG - Loaded JSON data ", type(report_data))
-
     # Load the Jinja template
     env = Environment(loader=FileSystemLoader('.'))
     template = env.get_template('./templates/report_template.html')
@@ -88,7 +84,7 @@ if __name__ == "__main__":
     # Render the HTML with Jinja
     print("INFO  - Building e-mail Daily Newsfeed.")
     current_date = datetime.now().strftime("%m/%d/%Y")
-    html_content = template.render(data=report_data, current_date=current_date)
+    html_content = template.render(data=report_payload_json, current_date=current_date)
     # print("DEBUG - ", html_content)
 
     # Setup email parameters
@@ -115,4 +111,19 @@ if __name__ == "__main__":
         server.login(smtp_username, smtp_password)
         server.sendmail(smtp_username, email_recipient, msg.as_string())
 
-    print("INFO  - Email sent successfully.")
+    print(f"INFO  - Email sent successfully to recipients [{email_recipient}].")
+
+
+if __name__ == "__main__":
+
+    current_datetime = datetime.now()
+    two_days_ago = current_datetime - timedelta(days=2)
+
+    report_payload = build_report_payload(start_publish_date=two_days_ago)
+
+    # # Load JSON data
+    # with open(f"{files_path}/report_payload.json", "r", encoding="utf-8") as json_file:
+    #     report_payload = json.load(json_file)
+    # print("DEBUG - Loaded JSON data ", type(report_payload))
+
+    send_email_report(report_payload)
