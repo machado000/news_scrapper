@@ -13,6 +13,7 @@ import feedparser
 from dotenv import load_dotenv
 from requests.exceptions import RequestException
 
+from src._decorators import retry
 from src._drv_mongodb import MongoCnx
 from src._drv_scrapers import CustomRequests
 
@@ -46,6 +47,7 @@ def convert_to_iso_date_string(input_date, output_timezone='UTC'):
         return None
 
 
+@retry()
 def request_bing_news_urls(session, query, results_count=100, freshness="day"):
     """
     Query Bing News API for news article urls.
@@ -117,6 +119,7 @@ def request_bing_news_urls(session, query, results_count=100, freshness="day"):
         return None, []
 
 
+@retry()
 def extract_rss_article_urls(rss_feed_urls):
     """
     Extracts article data from a list of RSS feed URLs.
