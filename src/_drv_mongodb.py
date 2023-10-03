@@ -46,11 +46,19 @@ class MongoCnx():
             inserted_documents_count = 0
 
             for document in document_list:
+
                 # Check if the document with the same _id already exists
                 existing_document = collection.find_one({"_id": document["_id"]})
 
                 if existing_document is None:
                     # Document with the same _id doesn't exist, insert the new document
+                    if 'publish_date' in document:
+                        # Convert the 'publish_date' string to a Python datetime object
+                        parsed_date = pendulum.parse(document['publish_date'])
+                        document['publish_date'] = parsed_date
+
+                    document['last_modified'] = datetime.now()
+
                     collection.insert_one(document)
                     inserted_documents_count += 1
 
@@ -88,13 +96,10 @@ into '{self.db.name}' collection '{collection.name}'")
                     parsed_date = pendulum.parse(document['publish_date'])
                     document['publish_date'] = parsed_date
 
-                update_data = {
-                    "$set": document,
-                    "$currentDate": {'last_modified': {"$type": 'date'}}
-                }
+                document['last_modified'] = datetime.now()
 
                 # Upsert the document into the collection
-                update_result = collection.update_one(filter_condition, update_data, upsert=True)
+                update_result = collection.update_one(filter_condition, document, upsert=True)
 
                 # Check if the document was updated or inserted
                 if update_result.matched_count > 0:
