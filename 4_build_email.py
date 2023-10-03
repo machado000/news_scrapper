@@ -1,6 +1,6 @@
 '''
 news_scrapper
-v.2023-09-23
+v.2023-10-02
 '''
 import json
 import os
@@ -45,14 +45,15 @@ if __name__ == "__main__":
 
     # 2. Match and update document statuses
     matches = mongo_cnx.match_doc_with_keywords(
-        collection_name, start_publish_date=None, status="summarized", keyword_list=keyword_list)
+        collection_name, start_publish_date=None, status=status, keyword_list=keyword_list)
     print(matches)
 
     mongo_cnx.update_collection("news", matches)
 
     # 3. Fetch documents with match to create email payload
+    domain = None
     status = "matched"
-    payload = mongo_cnx.get_doc_summary(collection_name=collection_name,
+    payload = mongo_cnx.get_doc_summary(collection_name=collection_name, domain=domain,
                                         start_publish_date=start_publish_date, status=status)
 
     if len(payload) > 0:
@@ -65,35 +66,35 @@ if __name__ == "__main__":
 
             item["domain"] = item["domain"].replace("www.", "")
 
-        # with open(f"./{files_path}/email_payload.json", "w", encoding="utf-8") as json_file:
-        #     json.dump(payload, json_file)
+        with open(f"{files_path}/email_payload.json", "w", encoding="utf-8") as json_file:
+            json.dump(payload, json_file)
+        print(f"INFO  - Payload saved on \'{files_path}/email_payload.json\'.")
 
     else:
         print("INFO  - Exiting program. There is no articles that match given settings.")
         sys.exit()
 
     # 4. Generate Jinja2 report template
-    print("INFO  - Building e-mail Daily Newsfeed.")
-    # Load the Jinja template
-    env = Environment(loader=FileSystemLoader('.'))
-    # template = env.get_template('./templates/report_template.html')
-    template = env.get_template('./templates/report_template.html')
 
     # Load JSON data
-    with open(f"./{files_path}/email_payload.json", "r", encoding="utf-8") as json_file:
+    with open(f"{files_path}/email_payload.json", "r", encoding="utf-8") as json_file:
         report_data = json.load(json_file)
     print("DEBUG - Loaded JSON data ", type(report_data))
 
-    # Render the HTML with Jinja
-    current_date = datetime.now().strftime("%m/%d/%Y")
+    # Load the Jinja template
+    env = Environment(loader=FileSystemLoader('.'))
+    template = env.get_template('./templates/report_template.html')
 
+    # Render the HTML with Jinja
+    print("INFO  - Building e-mail Daily Newsfeed.")
+    current_date = datetime.now().strftime("%m/%d/%Y")
     html_content = template.render(data=report_data, current_date=current_date)
     # print("DEBUG - ", html_content)
 
-    # Configure your email
+    # Setup email parameters
     email_sender = smtp_username
     email_recipient = "machado000@gmail.com"
-    email_subject = "13D Monitor Newsfeed"
+    email_subject = f"13D Monitor Newsfeed on {current_date}"
 
     # Create the MIME message
     msg = MIMEMultipart()
@@ -108,6 +109,7 @@ if __name__ == "__main__":
     smtp_host = 'smtp.office365.com'
     smtp_port = 587
 
+    # Finally send message
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
         server.login(smtp_username, smtp_password)
