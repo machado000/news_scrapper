@@ -1,12 +1,12 @@
+beautifulsoup4
+fake_useragent
 feedparser
+jinja2
 openai
 pandas
 pendulum
 pymongo
 python-dotenv
 requests
-beautifulsoup4
-fake_useragent
-lxml
 selenium
 webdriver_manager
