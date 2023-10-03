@@ -3,20 +3,36 @@ news_scrapper
 v.2023-10-02
 '''
 import json
-import sys
 import os
+import re
+import string
+import sys
 from datetime import datetime  # noqa
 
 import openai
 from dotenv import load_dotenv
 
-from src._drv_mongodb import MongoCnx
 from src._decorators import retry
+from src._drv_mongodb import MongoCnx
 
 # Load variables from .env
 load_dotenv()
 openai_apikey = os.getenv('OPENAI_APIKEY')
 # print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
+
+files_path = "./news_data"
+if not os.path.exists(files_path):
+    os.makedirs(files_path)
+
+
+def clean_text(text_str):
+    text_str = re.sub(r'\n', ' ', text_str)
+    text_str = ' '.join(text_str.split())
+
+    valid_chars = set(string.printable)
+    cleaned_text = ''.join(char for char in text_str if char in valid_chars)
+
+    return cleaned_text
 
 
 @retry()
@@ -75,17 +91,14 @@ def openai_summarize_text(input_text):
 if __name__ == "__main__":
 
     # 0. Initial settings
-    files_path = "./news_data"
-    if not os.path.exists(files_path):
-        os.makedirs(files_path)
-
     mongo_cnx = MongoCnx("news_db")
 
-    # 1. list articles to be scraped
+    # 1. list articles to be summarized
     collection_name = "news"
     domain = None
     start_date = None  # datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"
+
     articles = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
                                          start_publish_date=start_date, status=status)
 
@@ -95,7 +108,7 @@ if __name__ == "__main__":
 
     print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
 
-    # 3-B. Fetch and save page HTML soup and article_body.text, generate article summary with OpenAI
+    # 3-B. Generate article summary with OpenAI
     articles_summaries = []
     total_count = len(articles)
 
@@ -103,7 +116,9 @@ if __name__ == "__main__":
         try:
             # Send article text to openai and fetch summary
             article_body_text = item['content']
-            summary = openai_summarize_text(article_body_text)
+            cleaned_text = clean_text(article_body_text)
+
+            summary = openai_summarize_text(cleaned_text)
 
             summary_entry = {
                 "_id": item['_id'],
