@@ -130,27 +130,35 @@ def fetch_page_soup(driver, url):
 def parse_article_text(soup, domain):
     # Extract TXT from article body
     collection = mongo_cnx.db["selectors"]
-    element_selector = collection.find_one({"domain": domain})
-    # print("DEBUG - selector: ", selector["element"])
+    selector = collection.find_one({"domain": domain})
 
-    if element_selector["selector"] == "element":
-        element = soup.find(element_selector["element"])
+    if selector["selector"] == "element":
+        parse_str = f'soup.find({selector["element"]})'
+        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
+        element = soup.find(selector["element"])
 
-    if element_selector["selector"] == "class":
-        element = soup.find(element_selector["element"], class_=element_selector["class"])
+    if selector["selector"] == "class":
+        parse_str = f'soup.find({selector["element"]}, class_={selector["class"]})'
+        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
+        element = soup.find(selector["element"], class_=selector["class"])
 
-    if element_selector["selector"] == "id":
-        element = soup.find(element_selector["element"], id=element_selector["id"])
+    if selector["selector"] == "id":
+        parse_str = f'soup.find({selector["element"]}, id={selector["id"]})'
+        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
+        element = soup.find(selector["element"], id=selector["id"])
 
-    if element_selector["selector"] == "data-test":
-        element = soup.find(element_selector["element"], attrs={"data-test": element_selector["data-test"]})
+    if selector["selector"] == "data-test":
+        parse_str = f'soup.find({selector["element"]}, attrs={{"data-test": {selector["data-test"]} }})'
+        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
+        element = soup.find(selector["element"], attrs={"data-test": selector["data-test"]})
 
+    # return parse_str
     article_body_text = element.text
 
     return article_body_text
 
 
-if __name__ == "__main__":
+def parse_wsl_webpages():
 
     # 0. Initial settings
     files_path = "./news_data"
@@ -197,7 +205,7 @@ if __name__ == "__main__":
             # Extract TXT from article body
             collection = mongo_cnx.db["selectors"]
             selector = collection.find_one({"domain": item['domain']})
-            # print("DEBUG - selector: ", selector["element"])
+            # print(f'DEBUG - domain: {selector["domain"]}, selector: {selector["element"]}')
 
             if selector["selector"] == "element":
                 article_body = soup.find(selector["element"])
@@ -226,3 +234,81 @@ if __name__ == "__main__":
 
     # Close the driver when done
     driver.quit()
+
+    # collection = mongo_cnx.db["selectors"]
+    # query_result = collection.find({})
+    # selectors = list(query_result)
+
+    # for item in selectors:
+    #     parse_str = parse_article_text(soup=None, domain=item['domain'])
+    #     print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
+
+
+if __name__ == "__main__":
+
+    # 0. Initial settings
+    files_path = "./news_data"
+    if not os.path.exists(files_path):
+        os.makedirs(files_path)
+
+    mongo_cnx = MongoCnx("news_db")
+
+    # 1. list articles to be scraped
+    collection_name = "news"
+    start_date = datetime(2023, 10, 1, 12, 00)
+    status = "fetched"
+    articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=None,
+                                      start_publish_date=start_date, status=status)
+
+    if articles == []:
+        print("INFO  - Exiting program. No documents where found.")
+        sys.exit()
+
+    print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
+
+    # 2. Start Selenium Chrome Webdriver
+    handler = CustomWebDriver(username=proxy_username, password=proxy_password,
+                              endpoint=proxy_server, port=proxy_port)
+    driver = handler.open_driver()
+
+    # 3. Fetch and save page HTML soup and article_body.text
+    articles_contents = []
+    total_count = len(articles)
+
+    item = mongo_cnx.db["news"].find_one({"_id": "3321596d5237001eaecfe17e7025e03e"})
+    print(item)
+
+    for idx, item in enumerate(articles, start=1):
+        try:
+            soup = fetch_page_soup(driver, item["url"])
+            print("DEBUG - ", soup.prettify())
+
+            # Save local HTML file
+            html_file_path = f"./{files_path}/{item['_id']}.html"
+            with open(html_file_path, "w", encoding="utf-8") as file:
+                file.write(soup.prettify())
+
+            # Extract TXT from article body
+            article_body_text = parse_article_text(soup=soup, domain=item['domain'])
+
+            print(item["url"])
+            article_body = soup.find("body", class_="article-body")
+            print("DEBUG - ", article_body.prettify())
+            article_body_text = article_body.text
+
+            content_entry = {
+                "_id": item['_id'],
+                "content": article_body_text,
+                "status": "content_parsed",
+            }
+
+            articles_contents.append(content_entry)
+
+            print(f"INFO  - {idx}/{total_count} articles fetched and parsed content.")
+
+        except Exception as e:
+            print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
+            continue  # Continue to the next item in case of an error
+
+    with open(f"./{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+        json.dump(articles_contents, json_file)
