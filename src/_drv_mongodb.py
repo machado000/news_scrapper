@@ -96,10 +96,11 @@ into '{self.db.name}' collection '{collection.name}'")
                     parsed_date = pendulum.parse(document['publish_date'])
                     document['publish_date'] = parsed_date
 
-                document['last_modified'] = datetime.now()
-
-                # Upsert the document into the collection
-                update_result = collection.update_one(filter_condition, document, upsert=True)
+                update_data = {
+                    "$set": document,
+                    "$currentDate": {'lastmodified': {"$type": 'date'}}
+                }
+                update_result = collection.update_one(filter_condition, update_data, upsert=True)
 
                 # Check if the document was updated or inserted
                 if update_result.matched_count > 0:
