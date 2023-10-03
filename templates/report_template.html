@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>13D Monitor News Report</title>
+</head>
+
+<body>
+    <h1>Daily Report</h1>
+
+    {% for item in data %}
+    <div>
+        <h2>{{ item.title }}</h2>
+        <p>{{ item.summary }}</p>
+        <p>{{ item.domain }}</p>
+        <p>Published on: {{ item.publish_date }}</p>
+        <a href="{{ item.url }}">Read More</a>
+    </div>
+    {% endfor %}
+</body>
+
+</html>
