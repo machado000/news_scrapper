@@ -29,7 +29,6 @@ bing_apikey = os.getenv('BING_APIKEY')
 # print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
 
 files_path = "./news_data"
-
 if not os.path.exists(files_path):
     os.makedirs(files_path)
 
@@ -190,15 +189,16 @@ def extract_rss_article_urls(rss_feed_urls):
 
 if __name__ == "__main__":
 
+    mongo_cnx = MongoCnx("news_db")
+
+    # Query keywords search list
+    collection = mongo_cnx.db["keywords"]
+    keywords = collection.distinct("keyword", {"active": True})
+    # print("DEBUG - ", keywords)
+
     # 1. FETCH URLS FROM BING API, UPDATE MONGODB
     try:
-        mongo_cnx = MongoCnx("news_db")
-
-        # Query keywords search list, loop `request_bing_news_urls()`
-        collection = mongo_cnx.db["keywords"]
-        keywords = collection.distinct("keyword", {"active": True})
-        # print("DEBUG - ", keywords)
-
+        # Loop keywords with `request_bing_news_urls()`
         handler = CustomRequests(username=proxy_username, password=proxy_password,
                                  endpoint=proxy_server, port=proxy_port)
         session = handler.session
@@ -228,8 +228,6 @@ if __name__ == "__main__":
 
     # 2. FETCH URLS FROM WSJ RSS FEEDS, UPDATE MONGODB
     try:
-        mongo_cnx = MongoCnx("news_db")
-
         # List RSS feeds, loop `extract_rss_article_urls()`
         rss_feed_urls = [
             # "https://feeds.a.dj.com/rss/RSSOpinion.xml",
