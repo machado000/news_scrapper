@@ -163,6 +163,7 @@ cython_debug/
 /files
 /news_data
 draft.py
+temp.py
 *.json
 *.png
 *.zip
