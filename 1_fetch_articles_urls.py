@@ -1,6 +1,6 @@
 '''
 news_scrapper
-v.2023-09-23
+v.2023-10-02
 '''
 
 import hashlib
@@ -229,12 +229,12 @@ if __name__ == "__main__":
 
         # List RSS feeds, loop `extract_rss_article_urls()`
         rss_feed_urls = [
-            "https://feeds.a.dj.com/rss/RSSOpinion.xml",
+            # "https://feeds.a.dj.com/rss/RSSOpinion.xml",
             "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
             "https://feeds.a.dj.com/rss/WSJcomUSBusiness.xml",
             "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
             "https://feeds.a.dj.com/rss/RSSWSJD.xml",
-            "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
+            # "https://feeds.a.dj.com/rss/RSSLifestyle.xml",
         ]
 
         response_dict, all_links = extract_rss_article_urls(rss_feed_urls)
