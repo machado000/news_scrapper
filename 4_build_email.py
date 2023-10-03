@@ -4,9 +4,14 @@ v.2023-09-23
 '''
 import json
 import os
-
+import smtplib
+import sys
 from datetime import datetime
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+
 from dotenv import load_dotenv
+from jinja2 import Environment, FileSystemLoader
 
 from src._drv_mongodb import MongoCnx
 
@@ -16,13 +21,13 @@ smtp_username = os.getenv('SMTP_USERNAME')
 smtp_password = os.getenv('SMTP_PASSWORD')
 smtp_server = os.getenv('SMTP_SERVER')
 smtp_port = os.getenv('SMTP_PORT')
-# print("DEBUG - ", smtp_username, smtp_password, smtp_server, smtp_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
+# print("DEBUG - ", smtp_username, smtp_password, smtp_server, smtp_port) # noqa
 
 
 if __name__ == "__main__":
 
     # 0. Initial settings
-    files_path = "./news_data"
+    files_path = "./report_data"
     if not os.path.exists(files_path):
         os.makedirs(files_path)
 
@@ -60,5 +65,52 @@ if __name__ == "__main__":
 
             item["domain"] = item["domain"].replace("www.", "")
 
-        with open(f"./{files_path}/email_payload.json", "w", encoding="utf-8") as json_file:
-            json.dump(payload, json_file)
+        # with open(f"./{files_path}/email_payload.json", "w", encoding="utf-8") as json_file:
+        #     json.dump(payload, json_file)
+
+    else:
+        print("INFO  - Exiting program. There is no articles that match given settings.")
+        sys.exit()
+
+    # 4. Generate Jinja2 report template
+    print("INFO  - Building e-mail Daily Newsfeed.")
+    # Load the Jinja template
+    env = Environment(loader=FileSystemLoader('.'))
+    # template = env.get_template('./templates/report_template.html')
+    template = env.get_template('./templates/report_template.html')
+
+    # Load JSON data
+    with open(f"./{files_path}/email_payload.json", "r", encoding="utf-8") as json_file:
+        report_data = json.load(json_file)
+    print("DEBUG - Loaded JSON data ", type(report_data))
+
+    # Render the HTML with Jinja
+    current_date = datetime.now().strftime("%m/%d/%Y")
+
+    html_content = template.render(data=report_data, current_date=current_date)
+    # print("DEBUG - ", html_content)
+
+    # Configure your email
+    email_sender = smtp_username
+    email_recipient = "machado000@gmail.com"
+    email_subject = "13D Monitor Newsfeed"
+
+    # Create the MIME message
+    msg = MIMEMultipart()
+    msg['From'] = email_sender
+    msg['To'] = email_recipient
+    msg['Subject'] = email_subject
+
+    # Attach the HTML content
+    msg.attach(MIMEText(html_content, 'html'))
+
+    # Set up the SMTP server
+    smtp_host = 'smtp.office365.com'
+    smtp_port = 587
+
+    with smtplib.SMTP(smtp_host, smtp_port) as server:
+        server.starttls()
+        server.login(smtp_username, smtp_password)
+        server.sendmail(smtp_username, email_recipient, msg.as_string())
+
+    print("INFO  - Email sent successfully.")
