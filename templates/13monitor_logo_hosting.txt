@@ -1,0 +1,9 @@
+Link da imagem:			https://postimg.cc/bG5RWkX5
+Link direto:			https://i.postimg.cc/fLzg3f8M/13dmonitor-logo.png
+Markdown:				[13dmonitor-logo.png](https://postimg.cc/bG5RWkX5)
+Markdown:				[![13dmonitor-logo.png](https://i.postimg.cc/fLzg3f8M/13dmonitor-logo.png)](https://postimg.cc/bG5RWkX5)
+Miniaturas para fóruns:	[url=https://postimg.cc/bG5RWkX5][img]https://i.postimg.cc/bG5RWkX5/13dmonitor-logo.png[/img][/url]
+Miniaturas para sites:	<a href='https://postimg.cc/bG5RWkX5' target='_blank'><img src='https://i.postimg.cc/bG5RWkX5/13dmonitor-logo.png' border='0' alt='13dmonitor-logo'/></a>
+Hotlink para fóruns:	[url=https://postimages.org/][img]https://i.postimg.cc/fLzg3f8M/13dmonitor-logo.png[/img][/url]
+Hotlink para sites:		<a href='https://postimages.org/' target='_blank'><img src='https://i.postimg.cc/fLzg3f8M/13dmonitor-logo.png' border='0' alt='13dmonitor-logo'/></a>
+Link para apagar:		https://postimg.cc/delete/LrX0jb8f/1c1d2db2
