@@ -1,6 +1,6 @@
 '''
 news_scrapper
-v.2023-09-23
+v.2023-10-02
 '''
 import json
 import os
@@ -15,6 +15,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from src._decorators import retry
 from src._drv_mongodb import MongoCnx
 from src._drv_scrapers import CustomRequests, CustomWebDriver
 
@@ -37,6 +38,7 @@ def get_redirected_url(url):
     return redirected_url
 
 
+@retry()
 def login_wsj(driver):
     """
     Login to https://session.wsj.com and parse username and passord.
@@ -94,6 +96,7 @@ def login_wsj(driver):
     return None
 
 
+@retry()
 def fetch_page_soup(driver, url):
     """
     Navigate to a url and fetch page_source.
@@ -198,7 +201,7 @@ def parse_wsl_webpages():
             soup = fetch_page_soup(driver, item["url"])
 
             # Save local HTML file
-            html_file_path = f"./{files_path}/{item['_id']}.html"
+            html_file_path = f"{files_path}/{item['_id']}.html"
             with open(html_file_path, "w", encoding="utf-8") as file:
                 file.write(soup.prettify())
 
@@ -226,22 +229,15 @@ def parse_wsl_webpages():
             print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"./{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+    with open(f"{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
         json.dump(articles_contents, json_file)
 
     # 4. Update Mongodb with new article summaries
+    with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
+        articles_contents = json.load(json_file)
+
+    mongo_cnx = MongoCnx("news_db")
     mongo_cnx.update_collection("news", articles_contents)
-
-    # Close the driver when done
-    driver.quit()
-
-    # collection = mongo_cnx.db["selectors"]
-    # query_result = collection.find({})
-    # selectors = list(query_result)
-
-    # for item in selectors:
-    #     parse_str = parse_article_text(soup=None, domain=item['domain'])
-    #     print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
 
 
 if __name__ == "__main__":
@@ -255,9 +251,10 @@ if __name__ == "__main__":
 
     # 1. list articles to be scraped
     collection_name = "news"
+    domain = "finance.yahoo.com"
     start_date = datetime(2023, 10, 1, 12, 00)
     status = "fetched"
-    articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=None,
+    articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
                                       start_publish_date=start_date, status=status)
 
     if articles == []:
@@ -275,26 +272,22 @@ if __name__ == "__main__":
     articles_contents = []
     total_count = len(articles)
 
-    item = mongo_cnx.db["news"].find_one({"_id": "3321596d5237001eaecfe17e7025e03e"})
+    item = mongo_cnx.db["news"].find_one({"domain": "finance.yahoo.com"})
     print(item)
 
     for idx, item in enumerate(articles, start=1):
         try:
             soup = fetch_page_soup(driver, item["url"])
-            print("DEBUG - ", soup.prettify())
+            # print("DEBUG - ", soup.prettify())
 
             # Save local HTML file
-            html_file_path = f"./{files_path}/{item['_id']}.html"
+            html_file_path = f"{files_path}/{item['_id']}.html"
             with open(html_file_path, "w", encoding="utf-8") as file:
                 file.write(soup.prettify())
 
             # Extract TXT from article body
             article_body_text = parse_article_text(soup=soup, domain=item['domain'])
-
-            print(item["url"])
-            article_body = soup.find("body", class_="article-body")
-            print("DEBUG - ", article_body.prettify())
-            article_body_text = article_body.text
+            print(f"DEBUG - article_body_text: {article_body_text[0:200]}...")
 
             content_entry = {
                 "_id": item['_id'],
@@ -310,5 +303,12 @@ if __name__ == "__main__":
             print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"./{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+    with open(f"{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
         json.dump(articles_contents, json_file)
+
+    # 4. Update Mongodb with new article summaries
+    with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
+        articles_contents = json.load(json_file)
+
+    mongo_cnx = MongoCnx("news_db")
+    mongo_cnx.update_collection("news", articles_contents)
