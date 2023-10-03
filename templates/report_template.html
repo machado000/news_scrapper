@@ -1,22 +1,385 @@
-<!DOCTYPE html>
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
 
 <head>
-    <title>13D Monitor News Report</title>
+	<meta name="googlebot" content="noindex, noarchive, nofollow">
+	<title>13D Monitor Newsfeed</title>
+
+	<style type="text/css">
+		body,
+		td,
+		.bodytext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 12px;
+			line-height: 1.4;
+			color: #666666;
+		}
+
+		.headlinesectionheader {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 11px;
+			line-height: 1.4;
+			color: #000;
+		}
+
+		hr {
+
+			margin-top: 2px;
+			margin-bottom: 10px;
+		}
+
+
+		#page-background {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		#content {
+			position: relative;
+			z-index: 1;
+			padding: 10px;
+		}
+
+
+		.sponsor-hr-top hr {
+
+			margin-top: 5px;
+			margin-bottom: 15px;
+		}
+
+		.sponsor-hr-bottom hr {
+
+			margin-top: 0px;
+			margin-bottom: 15px;
+		}
+
+		.sidebar {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10px;
+			line-height: 1.2;
+			color: #333333;
+		}
+
+		.sidebar A {
+			font-size: 10px;
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:link {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:visited {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:active {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.sidebar A:hover {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.sidebar hr {
+			margin-top: 5px;
+			margin-bottom: 5px;
+		}
+
+
+
+		/*.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:link.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:visited.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:active.artTitleLink {
+		  text-decoration: none; color:#333333;}
+		A:hover.artTitleLink {
+		  text-decoration: none; color:#333333;}*/
+
+		.headertext {
+			font-family: times new roman, georgia, serif;
+			font-size: 12pt;
+			line-height: 1.2;
+		}
+
+		.bodytext2 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.2;
+			color: #ffffff;
+		}
+
+		.bodytext3 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.2;
+			color: #333366;
+		}
+
+		.sponsortext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 7pt;
+			line-height: 1.0;
+			color: #000000;
+		}
+
+		.datetext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.0;
+			color: #000000;
+		}
+
+		A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 12px;
+			line-height: 1.2;
+			color: #1A65B1;
+		}
+
+		A:link {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:visited {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:active {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:hover {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.message A,
+		.Abstracts A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8pt;
+			line-height: 1.2;
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:link,
+		.Abstracts A:link {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:visited,
+		.Abstracts A:visited {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:active,
+		.Abstracts A:active {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:hover,
+		.Abstracts A:hover {
+			color: #4477bb;
+			text-decoration: underline;
+		}
+
+		.link1 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8.5pt;
+			line-height: 1.2;
+			color: #ffffff;
+		}
+
+		.link1 A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8.5pt;
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:link {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:visited {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:active {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:hover {
+			text-decoration: underline;
+			color: #ffffff;
+		}
+
+
+
+
+		.grouphead {
+			border-bottom: 2px solid #cccccc;
+			border-left: 0px none #285775;
+			border-right: 0px none #285775;
+			border-top: 0px none #285775;
+			background-color: #ffffff;
+			width: 98%;
+			font-size: 14px;
+			color: #1b65b1;
+			padding-top: 0px;
+			padding-left: 0px;
+			padding-right: 0px;
+			padding-bottom: 1px;
+			margin: 0px;
+		}
+
+		.sidebarGrouphead {
+			border-bottom: 0px none #002d61;
+			border-left: 0px none #ffffff;
+			border-right: 0px none #ffffff;
+			border-top: 0px none #ffffff;
+			background-color: #e7e7e7;
+			width: 98%;
+			font-size: 12px;
+			color: #1b65b1;
+			padding: 0px;
+			margin: 0px;
+		}
+
+
+
+		/*Leave commented. Does not work in Outlook 2007
+		  ul {margin-left: 0px;
+			  padding-left: 0px;
+			  }
+		  li {margin-left: 15px;
+			  padding-left: 0px;
+			  list-style-position: outside;
+			  }*/
+		.Annotation {
+			border: 1px gray solid;
+			padding: 7.5px;
+			margin-top: 15px;
+		}
+
+		.Annotation A:link,
+		.Annotation A:active {
+			text-decoration: none;
+			color: #000;
+
+		}
+
+		.Annotation A:visited {
+			text-decoration: none;
+			color: #545454;
+
+		}
+	</style>
 </head>
 
-<body>
-    <h1>Daily Report</h1>
+<body style="margin:20px;">
+	<p class="grouphead" style="font-size:18px;color:#666666;max-width:750px;border-color:#666666;border-width:4px;">
+		<strong>13D Monitor Newsfeed {{ current_date }}</strong>
 
-    {% for item in data %}
-    <div>
-        <h2>{{ item.title }}</h2>
-        <p>{{ item.summary }}</p>
-        <p>{{ item.domain }}</p>
-        <p>Published on: {{ item.publish_date }}</p>
-        <a href="{{ item.url }}">Read More</a>
-    </div>
-    {% endfor %}
+	</p>
+
+
+
+
+	<div style="max-width:600px;">
+
+		<a name="top"></a><br>
+
+
+
+
+		<table summary="Structure Table" border="0" cellspacing="3" cellpadding="0">
+
+			<tr>
+				<td colspan="2" style="margin-bottom:3px;">
+					<div class="grouphead"><b>Industry News</b></div><br>
+				</td>
+			</tr>
+
+			{% for item in data %}
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#{{ item._id}}">{{ item.title}}</a></td>
+			</tr>
+			{% endfor %}
+
+			<tr>
+				<td colspan="2" height="5"></td>
+			</tr>
+		</table>
+		<br />
+		<div class="grouphead"><b>Industry News</b></div>
+		{% for item in data %}
+		<br /> <a name="{{ item._id}}"></a>
+		<b>{{ item.title }}</b><br />
+		<i>{{ item.domain }} ({{ item.publish_date }})</i><br />
+		<br />{{ item.summary }}<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="{{ item.url }}" target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+		{% endfor %}
+
+		<br /> <br />
+
+
+		<p>
+			<hr />
+		<p>
+
+
+
+		<table cellspacing="0" cellpadding="0" border="0" summary="Structure Table">
+			<tbody>
+				<tr valign="top">
+					<td>
+						News summaries &copy; copyright 2023 <a href="https://www.13dmonitor.com" target="_blank">13D
+							Monitor</a>
+					</td>
+				</tr>
+				<tr valign="top">
+					<td>
+
+						<a href="https://www.13dmonitor.com" target="_blank"><img
+								src="https://i.postimg.cc/fLzg3f8M/13dmonitor-logo.png" width="140" height="23"
+								style="max-width:140px;"></a>
+
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
 </body>
 
 </html>

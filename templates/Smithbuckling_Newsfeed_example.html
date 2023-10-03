@@ -1,0 +1,566 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+
+<head>
+	<meta name="googlebot" content="noindex, noarchive, nofollow">
+	<title>13D Monitor Newsfeed</title>
+
+	<style type="text/css">
+		body,
+		td,
+		.bodytext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 12px;
+			line-height: 1.4;
+			color: #666666;
+		}
+
+		.headlinesectionheader {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 11px;
+			line-height: 1.4;
+			color: #000;
+		}
+
+		hr {
+
+			margin-top: 2px;
+			margin-bottom: 10px;
+		}
+
+
+		#page-background {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+		}
+
+		#content {
+			position: relative;
+			z-index: 1;
+			padding: 10px;
+		}
+
+
+		.sponsor-hr-top hr {
+
+			margin-top: 5px;
+			margin-bottom: 15px;
+		}
+
+		.sponsor-hr-bottom hr {
+
+			margin-top: 0px;
+			margin-bottom: 15px;
+		}
+
+		.sidebar {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10px;
+			line-height: 1.2;
+			color: #333333;
+		}
+
+		.sidebar A {
+			font-size: 10px;
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:link {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:visited {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		.sidebar A:active {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.sidebar A:hover {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.sidebar hr {
+			margin-top: 5px;
+			margin-bottom: 5px;
+		}
+
+
+
+		/*.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:link.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:visited.artTitleLink {
+		  text-decoration: ; color:#333333;}
+		A:active.artTitleLink {
+		  text-decoration: none; color:#333333;}
+		A:hover.artTitleLink {
+		  text-decoration: none; color:#333333;}*/
+
+		.headertext {
+			font-family: times new roman, georgia, serif;
+			font-size: 12pt;
+			line-height: 1.2;
+		}
+
+		.bodytext2 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.2;
+			color: #ffffff;
+		}
+
+		.bodytext3 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.2;
+			color: #333366;
+		}
+
+		.sponsortext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 7pt;
+			line-height: 1.0;
+			color: #000000;
+		}
+
+		.datetext {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 10pt;
+			line-height: 1.0;
+			color: #000000;
+		}
+
+		A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 12px;
+			line-height: 1.2;
+			color: #1A65B1;
+		}
+
+		A:link {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:visited {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:active {
+			text-decoration: none;
+			color: #1A65B1;
+		}
+
+		A:hover {
+			text-decoration: underline;
+			color: #1A65B1;
+		}
+
+		.message A,
+		.Abstracts A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8pt;
+			line-height: 1.2;
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:link,
+		.Abstracts A:link {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:visited,
+		.Abstracts A:visited {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:active,
+		.Abstracts A:active {
+			color: #4477bb;
+			text-decoration: none;
+		}
+
+		.message A:hover,
+		.Abstracts A:hover {
+			color: #4477bb;
+			text-decoration: underline;
+		}
+
+		.link1 {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8.5pt;
+			line-height: 1.2;
+			color: #ffffff;
+		}
+
+		.link1 A {
+			font-family: verdana, tahoma, geneva, arial;
+			font-size: 8.5pt;
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:link {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:visited {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:active {
+			text-decoration: none;
+			color: #ffffff;
+		}
+
+		.link1 A:hover {
+			text-decoration: underline;
+			color: #ffffff;
+		}
+
+
+
+
+		.grouphead {
+			border-bottom: 2px solid #cccccc;
+			border-left: 0px none #285775;
+			border-right: 0px none #285775;
+			border-top: 0px none #285775;
+			background-color: #ffffff;
+			width: 98%;
+			font-size: 14px;
+			color: #1b65b1;
+			padding-top: 0px;
+			padding-left: 0px;
+			padding-right: 0px;
+			padding-bottom: 1px;
+			margin: 0px;
+		}
+
+		.sidebarGrouphead {
+			border-bottom: 0px none #002d61;
+			border-left: 0px none #ffffff;
+			border-right: 0px none #ffffff;
+			border-top: 0px none #ffffff;
+			background-color: #e7e7e7;
+			width: 98%;
+			font-size: 12px;
+			color: #1b65b1;
+			padding: 0px;
+			margin: 0px;
+		}
+
+
+
+		/*Leave commented. Does not work in Outlook 2007
+		  ul {margin-left: 0px;
+			  padding-left: 0px;
+			  }
+		  li {margin-left: 15px;
+			  padding-left: 0px;
+			  list-style-position: outside;
+			  }*/
+		.Annotation {
+			border: 1px gray solid;
+			padding: 7.5px;
+			margin-top: 15px;
+		}
+
+		.Annotation A:link,
+		.Annotation A:active {
+			text-decoration: none;
+			color: #000;
+
+		}
+
+		.Annotation A:visited {
+			text-decoration: none;
+			color: #545454;
+
+		}
+	</style>
+</head>
+
+<body style="margin:20px;">
+	<p class="grouphead" style="font-size:18px;color:#666666;max-width:750px;border-color:#666666;border-width:4px;">
+		<strong>13D Monitor Newsfeed 09/07/23</strong>
+
+	</p>
+
+
+
+
+	<div style="max-width:600px;">
+
+		<a name="top"></a><br>
+
+
+
+
+		<table summary="Structure Table" border="0" cellspacing="3" cellpadding="0">
+
+			<tr>
+				<td colspan="2" style="margin-bottom:3px;">
+					<div class="grouphead"><b>Industry News</b></div><br>
+				</td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257682">Weinstein Group Revises Sculptor Bid After
+						Board&rsquo;s Concerns</a></td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257683">Orange Capital to Vote FOR the Merger and
+						Internalization Transaction at the GNL Special Meeting</a></td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257685">GameStop Stock Jumps After Results Top Estimates,
+						Helped by International Gains</a></td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257666">Bank of America Most Favored for Activism Defense in
+						First Half of 2023, LSEG Data Show</a></td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257680">European Shareholders Contest More Executive Pay
+						Reports</a></td>
+			</tr>
+
+			<tr>
+				<td>&bull;</td>
+				<td style="margin-bottom:3px;"><a href="#1257592">GOP ESG Bills Await U.S. House Floor Consideration</a>
+				</td>
+			</tr>
+
+			<tr>
+				<td colspan="2" height="5"></td>
+			</tr>
+		</table>
+		<br />
+		<div class="grouphead"><b>Industry News</b></div><br /> <a name="1257682"></a>
+		<b>Weinstein Group Revises Sculptor Bid After Board&rsquo;s Concerns</b><br /> <i>Bloomberg (09/06/23) Burton,
+			Katherine</i><br /> <br /> Boaz Weinstein and his group of bidders have reportedly revised their offer to
+		purchase Sculptor Capital Management Inc. (SCU), seeking to address some of the concerns the board&rsquo;s
+		special committee outlined in a proxy filing last week. While Weinstein&rsquo;s bid remains at $12.76 a share,
+		it has beefed up its equity commitments, eliminated risks associated with debt financing and increased the
+		damages it would pay if it fails to consummate the transaction, people familiar with the matter said. Sculptor
+		accepted Rithm Capital Corp.&rsquo;s lower bid of $11.15 a share, or about $639 million, in July. It still
+		preferred that offer as of a filing on Aug. 30, citing a variety of concerns about the higher bid from the other
+		group. It is unclear whether Sculptor will be swayed by the amended proposal. The group, which also includes
+		Bill Ackman, Marc Lasry, and Jeff Yass, increased its offer last week by 51 cents a share. Former Sculptor Chief
+		Executive Officer Rob Shafir, who owns 6.2% of the firm&rsquo;s Class A common stock, later issued a statement
+		calling it &ldquo;clearly superior&rdquo; to the Rithm deal. The higher offer is also favored by Dan Och, who
+		founded the firm previously known as Och-Ziff, and four other former executives. Sculptor, led by Chief
+		Executive Officer Jimmy Levin, has said Bidder J&rsquo;s proposal is less attractive in part because of the risk
+		that clients won&rsquo;t accept that buyer&rsquo;s choice to replace him. While Rithm plans to retain Levin,
+		Weinstein&rsquo;s group has said it would oust him as chief investment officer, according to a proxy
+		filing.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.bloomberg.com/news/articles/2023-09-06/weinstein-group-revises-sculptor-bid-to-address-board-s-concerns?sref=db2f3qgr"
+				target="_blank">Web Link</a> - May Require Paid Subscription |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <a name="1257683"></a>
+		<b>Orange Capital to Vote FOR the Merger and Internalization Transaction at the GNL Special Meeting</b><br />
+		<i>PRNewswire (09/06/23)</i><br /> <br /> Orange Capital Ventures on Wednesday announced its intention to vote
+		in favor of the proposed internalization and merger transaction after reaching out to management, performing a
+		thorough review of Global Net Lease, Inc.'s (GNL) presentation filed on August 28, and its related joint proxy
+		materials, participating in the investor call hosted on September 5, and entering into a confidential agreement
+		with the company's advisor and the company following discussions with its management. Pursuant to the agreement,
+		the advisor, at no expense to the company, will reimburse Orange Capital for its time and expenses depending on
+		the outcome of the vote. Orange Capital agrees that the proposed internalization consideration is within the
+		range of precedent transactions as determined by BMO given the size and scope of the proposed transaction and
+		compared to comparable market transactions. Under the agreement, Orange Capital has entered into a customary
+		standstill agreement and will vote in favor of the company's directors at the 2024 annual meeting.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.prnewswire.com/news-releases/orange-capital-to-vote-for-the-merger-and-internalization-transaction-at-the-gnl-special-meeting-301919776.html"
+				target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <a name="1257685"></a>
+		<b>GameStop Stock Jumps After Results Top Estimates, Helped by International Gains</b><br /> <i>MarketWatch
+			(09/06/23) Peters, Bill</i><br /> <br /> Shares of GameStop Corp. (GME) rose in extended trading Wednesday
+		after the videogame retailer reported second-quarter results that beat expectations, lifted by international
+		sales gains and what the company described as &ldquo;a significant software release.&rdquo; The company &mdash;
+		which over the past few months has made some big leadership changes &mdash; reported a net loss of $2.8 million,
+		or 1 cent a share, compared with $108.7 million, or 36 cents a share, in the same quarter last year. Revenue
+		crept higher to $1.16 billion, compared with $1.14 billion in the prior-year quarter. GameStop&rsquo;s adjusted
+		net loss per share was 3 cents. The company ended the quarter with cash and equivalents of $1.195 billion,
+		compared with around $1.3 billion in the prior quarter. Analysts polled by FactSet expected a 14-cent adjusted
+		per-share loss, on revenue of $1.14 billion. Shares rose 3.6% after hours. The company, as with its previous
+		round of earnings, said it would not be holding a conference call. GameStop reported its results in the wake of
+		the firing of its chief executive and the election of investor Ryan Cohen to executive chair in June, followed
+		by the resignation of its chief financial officer. Cohen over the past few years has amassed greater influence
+		over the company. Wall Street, however, has had broader concerns about a shift to mobile and digital gaming, and
+		the threat posed to physical videogame retailers.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.marketwatch.com/story/gamestop-stock-jumps-after-results-top-estimates-2d3b8284"
+				target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <a name="1257666"></a>
+		<b>Bank of America Most Favored for Activism Defense in First Half of 2023, LSEG Data Show</b><br /> <i>Reuters
+			(09/06/23) Herbst-Bayliss, Svea</i><br /> <br /> Data from LSEG shows Bank of America (BAC) rose to become
+		the top financial adviser to companies engaged by activist investors in the first half of this year. The bank
+		advised on 33 campaigns, including defending Salesforce (CRM) against Elliott Investment Management, Starboard
+		Value, Inclusive Capital Partners, and ValueAct. It also joined LivePerson (LPSN) in its fight against Starboard
+		and Life Storage when Public Storage (PSA) made an unsolicited bid. Second-place financial adviser Goldman Sachs
+		(GS) worked on 30 campaigns ahead of third-place-ranked JPMorgan Chase (JPM), which participated in 23
+		campaigns. Bank of America came in fifth place with 12 mandates, lagging behind Goldman, JPMorgan, Spotlight
+		Advisers, and Morgan Stanley (MS). Sidley Austin maintained its position as the activism-focused law firm most
+		favored by corporations with 32 mandates. The busiest law firm was Olshan Frome Wolosky, which works exclusively
+		with activists, with 44 campaigns. Sidley overtook Vinson & Elkins LLP, which had 23 campaigns, and Schulte Roth
+		& Zabel, which also works solely with activists, with 22 mandates. Wilson Sonsini rose from seventh to fifth
+		place with 15 campaigns. The top proxy solicitor, with 106 campaigns, continued to be Innisfree M&A. The eight
+		leading advisers, including Spotlight, LDG Advisory, Lazard, and Evercore Partners, participated in 136 mandates
+		in the first half of 2023, down from 165 a year ago. Various providers collate league tables that are often used
+		to garner new clients, yet bankers say discrepancies can crop up because many companies ward off activists
+		privately and request advisers to keep quiet about their role.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.reuters.com/business/finance/bank-america-most-favored-activism-defense-h1-2023-lseg-data-2023-09-06/"
+				target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <a name="1257680"></a>
+		<b>European Shareholders Contest More Executive Pay Reports</b><br /> <i>Reuters (09/06/23) Wilkes,
+			Tommy</i><br /> <br /> European shareholders are increasingly contesting corporate executive pay reports,
+		data showed on Wednesday, as investors unhappy with companies' approach to environmental and social issues vote
+		against director remuneration. The percentage of remuneration reports disputed by investors across seven
+		countries reached 42.9% during the 2023 annual general meeting season, the highest in at least five years,
+		according to an annual review by shareholder engagement firm Georgeson. Daniele Vitale, Georgeson's head of
+		governance UK & Europe, said limited environmental and social resolutions meant shareholders were using pay
+		reports to voice dissent. Georgeson defines a vote as contested if at least 10% of votes are against. "There is
+		also a perception that some companies have used ESG metrics in pay to make it easier for executives to meet
+		payouts," said Vitale. Switzerland saw the highest proportion of contested resolutions on remuneration
+		reporting, at 68.4%. The UK had the least, at 20.2%, but its percentage has been rising and is up from 16.2% in
+		2021, Georgeson found. Opposition to executive pay looks likely to increase too, as big asset managers including
+		BlackRock (BLK) and State Street adopt so-called devolved proxy voting rights to end investors, who may vote
+		differently from institutional shareholders, said Domenic Brancati, Georgeson's global chief operating officer.
+		Georgeson found that the percentage of disputed resolutions on remuneration policy dropped to 29.2% from 34.8%
+		in 2022. The proportion of contested director election resolutions reached 11.7% from 11.2% in 2022, the review
+		showed. European shareholders remain reluctant to vote against directors because it is considered more
+		confrontational, Vitale said, but he expects that will change as investors' environmental and social concerns
+		grow.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.reuters.com/sustainability/european-shareholders-contest-more-executive-pay-reports-2023-09-06/"
+				target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <a name="1257592"></a>
+		<b>GOP ESG Bills Await U.S. House Floor Consideration</b><br /> <i>National Law Review (09/06/23) Crowley,
+			Daniel F.C.; Page, Karishma Shah; Heiman, Bruce J.</i><br /> <br /> Patrick McHenry (R-NC), chair of the
+		House Financial Services Committee (HFSC), recently concluded a month-long series of hearings regarding digital
+		assets and ESG legislation. During markups held on July 26-27, the HFSC advanced several bills on these issues,
+		both on a bipartisan basis (digital assets and stablecoin) and along party lines (anti-ESG bills). Prior to the
+		ESG markup, GOP members of the HFSC unveiled 18 bills that would be under consideration, but the measures were
+		subsequently bundled into larger packages that likely would be solely backed by Republicans. In the near future,
+		McHenry is expected to seek full House consideration of the committee's bills. Meanwhile, the leading
+		congressional priorities are consideration of the fiscal year (FY) 2024 appropriations bills, the FY2024
+		National Defense Authorization Act, the Federal Aviation Administration reauthorization, and the Farm Bill.
+		However, the GOP-led House may consider and pass the HFSC's bills related to ESG and digital assets. It is also
+		possible there will be room for bipartisan agreement on some of these issues going forward. The congressional
+		focus on ESG will likely be impacted by the U.S. Securities and Exchange Commission's (SEC) long-awaited final
+		rule on climate risk disclosures and proposed rule on human capital disclosures. Both rulemakings are listed on
+		the SEC's Unified Regulatory Agenda with possible actions in October 2023. However, the timing remains uncertain
+		and these rulemakings may be delayed to 2024 in light of the ongoing controversy and threats of litigation
+		related to ESG. Any proposed and final regulations are expected to result in increased attention and oversight,
+		particularly by House Republicans.<br />
+		<div style="margin-top:5px; line-height: 1.75">
+
+
+
+
+			<a href="https://www.natlawreview.com/article/gop-esg-bills-await-us-house-floor-consideration#google_vignette"
+				target="_blank">Web Link</a> |
+
+			<a href="#top">Return to Headlines</a>
+		</div>
+
+		<br /> <br />
+
+
+		<p>
+			<hr />
+		<p>
+
+
+
+		<table cellspacing="0" cellpadding="0" border="0" summary="Structure Table">
+			<tbody>
+				<tr valign="top">
+					<td style="">
+						News summaries &copy; copyright 2023 <a href="https://content.smithbucklin.com/Copyright"
+							target="_blank">Smithbucklin</a>
+					</td>
+				</tr>
+				<tr valign="top">
+					<td>
+
+						<a href="https://www.smithbucklin.com" target="_blank"><img
+								src="http://news.content.smithbucklin.com/images/smithb-logo.png" width="140"
+								height="23" style="max-width:140px;"></a>
+
+					</td>
+				</tr>
+			</tbody>
+		</table>
+
+</body>
+
+</html>
