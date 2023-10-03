@@ -4,10 +4,12 @@ v.2023-10-02
 '''
 import json
 import os
+import re
+import string
 import sys
+from datetime import datetime, timedelta
 from time import sleep
 
-from datetime import datetime
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
@@ -29,6 +31,20 @@ wsj_username = os.getenv('WSJ_USERNAME')
 wsj_password = os.getenv('WSJ_PASSWORD')
 bing_apikey = os.getenv('BING_APIKEY')
 # print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
+
+files_path = "./news_data"
+if not os.path.exists(files_path):
+    os.makedirs(files_path)
+
+
+def clean_text(text_str):
+    text_str = re.sub(r'\n', ' ', text_str)
+    text_str = ' '.join(text_str.split())
+
+    valid_chars = set(string.printable)
+    cleaned_text = ''.join(char for char in text_str if char in valid_chars)
+
+    return cleaned_text
 
 
 def get_redirected_url(url):
@@ -131,52 +147,44 @@ def fetch_page_soup(driver, url):
 
 
 def parse_article_text(soup, domain):
+
+    # 0. Initial settings
+    mongo_cnx = MongoCnx("news_db")
+
     # Extract TXT from article body
     collection = mongo_cnx.db["selectors"]
     selector = collection.find_one({"domain": domain})
 
     if selector["selector"] == "element":
-        parse_str = f'soup.find({selector["element"]})'
-        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
         element = soup.find(selector["element"])
 
     if selector["selector"] == "class":
-        parse_str = f'soup.find({selector["element"]}, class_={selector["class"]})'
-        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
-        element = soup.find(selector["element"], class_=selector["class"])
+        # element = soup.find(selector["element"], class_=selector["class"])
+        element_list = soup.select(f'{selector["element"]}[class*="{selector["class"]}"]')
+        element = element_list[0]
 
     if selector["selector"] == "id":
-        parse_str = f'soup.find({selector["element"]}, id={selector["id"]})'
-        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
         element = soup.find(selector["element"], id=selector["id"])
 
     if selector["selector"] == "data-test":
-        parse_str = f'soup.find({selector["element"]}, attrs={{"data-test": {selector["data-test"]} }})'
-        print(f"DEBUG - domain: {item['domain']}  -  string: {parse_str}")
         element = soup.find(selector["element"], attrs={"data-test": selector["data-test"]})
 
-    # return parse_str
-    article_body_text = element.text
+    cleaned_text = clean_text(element.text)
 
-    return article_body_text
+    return cleaned_text
 
 
-def parse_wsl_webpages():
+def parse_wsl_webpages(start_publish_date):
 
     # 0. Initial settings
-    files_path = "./news_data"
-    if not os.path.exists(files_path):
-        os.makedirs(files_path)
-
     mongo_cnx = MongoCnx("news_db")
 
     # 1. list articles to be scraped
     collection_name = "news"
     domain = "www.wsj.com"
-    start_date = datetime(2023, 10, 1, 12, 00)
     status = "fetched"
     articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
-                                      start_publish_date=start_date, status=status)
+                                      start_publish_date=start_publish_date, status=status)
 
     if articles == []:
         print("INFO  - Exiting program. No documents where found.")
@@ -236,30 +244,24 @@ def parse_wsl_webpages():
     with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
         articles_contents = json.load(json_file)
 
-    mongo_cnx = MongoCnx("news_db")
     mongo_cnx.update_collection("news", articles_contents)
 
 
-if __name__ == "__main__":
+def parse_free_webpages(start_publish_date, domain=None):
 
     # 0. Initial settings
-    files_path = "./news_data"
-    if not os.path.exists(files_path):
-        os.makedirs(files_path)
-
     mongo_cnx = MongoCnx("news_db")
 
     # 1. list articles to be scraped
     collection_name = "news"
-    domain = "finance.yahoo.com"
-    start_date = datetime(2023, 10, 1, 12, 00)
+    # domain = "markets.businessinsider.com"  # DEBUG
     status = "fetched"
     articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
-                                      start_publish_date=start_date, status=status)
+                                      start_publish_date=start_publish_date, status=status)
 
     if articles == []:
-        print("INFO  - Exiting program. No documents where found.")
-        sys.exit()
+        print(f"INFO  - Finishing task. No documents where found with domain {domain} and status {status}.")
+        return None
 
     print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
 
@@ -271,9 +273,8 @@ if __name__ == "__main__":
     # 3. Fetch and save page HTML soup and article_body.text
     articles_contents = []
     total_count = len(articles)
-
-    item = mongo_cnx.db["news"].find_one({"domain": "finance.yahoo.com"})
-    print(item)
+    # item = articles[0]  # DEBUG
+    # print("DEBUG - ", item)
 
     for idx, item in enumerate(articles, start=1):
         try:
@@ -286,8 +287,15 @@ if __name__ == "__main__":
                 file.write(soup.prettify())
 
             # Extract TXT from article body
+            collection = mongo_cnx.db["selectors"]  # DEBUG
+            selector = collection.find_one({"domain": domain})  # DEBUG
+            print(selector)  # DEBUG
+
+            # element_list = soup.select(f'div[class*="news-article__body"]')
+            # element = element_list[0]
+            # article_body_text = element.text
             article_body_text = parse_article_text(soup=soup, domain=item['domain'])
-            print(f"DEBUG - article_body_text: {article_body_text[0:200]}...")
+            print(f"DEBUG - article_body_text: {article_body_text[0:500]}...")
 
             content_entry = {
                 "_id": item['_id'],
@@ -297,10 +305,20 @@ if __name__ == "__main__":
 
             articles_contents.append(content_entry)
 
-            print(f"INFO  - {idx}/{total_count} articles fetched and parsed content.")
+            print(f"INFO  - {idx}/{total_count} articles fetched and parsed.")
+
+        # except IndexError as e:
+        #     print(f"ERROR - {idx}/{total_count} - Error parsing {item['url']}: {str(e)}")
+
+        #     content_entry = {
+        #         "_id": item['_id'],
+        #         "status": "error_parse_content",
+        #     }
+        #     articles_contents.append(content_entry)
+        #     continue  # Continue to the next item in case of an error
 
         except Exception as e:
-            print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
+            print(f"ERROR - {idx}/{total_count} - Error parsing {item['url']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
     with open(f"{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
@@ -310,5 +328,27 @@ if __name__ == "__main__":
     with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
         articles_contents = json.load(json_file)
 
-    mongo_cnx = MongoCnx("news_db")
     mongo_cnx.update_collection("news", articles_contents)
+
+
+if __name__ == "__main__":
+
+    current_datetime = datetime.now()
+    days_ago = current_datetime - timedelta(days=2)
+    start_publish_date = days_ago
+
+    # Parse WSJ
+    parse_wsl_webpages(start_publish_date=days_ago)
+
+    # Parse FREE news_sites
+    # valid_domains = [
+    #     # "markets.businessinsider.com",
+    #     "www.insidermonkey.com",
+    #     "www.nasdaq.com",
+    #     # "www.thestreet.com",
+    #     "www.morningstar.com",
+    # ]
+
+    # for domain in valid_domains:
+    #     print(f"\nINFO  - Parsing domain {domain}")
+    #     parse_free_webpages(start_publish_date=days_ago, domain=domain)
