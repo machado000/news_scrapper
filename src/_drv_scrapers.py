@@ -14,12 +14,12 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
+from requests.exceptions import HTTPError
+from retrying import retry
 from selenium.webdriver import Chrome, ChromeOptions
 # from selenium.webdriver import Edge, EdgeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-
-from src._decorators import retry
 
 
 class CustomRequests:
@@ -42,17 +42,26 @@ class CustomRequests:
         soup = self.fetch_soup("https://ipinfo.io/ip")
         print(f"INFO  - Success opening 'requests' session with proxy ip '{soup.text}'")
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def get_response(self, url):
         try:
             response = self.session.get(url, timeout=5)
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             return response
+
+        except HTTPError as e:
+            if e.response.status_code == 429:
+                print("INFO - 'Too Many Requests' error. Retrying...")
+                raise  # This will trigger the retry mechanism
+            else:
+                print(f"INFO - Failed to get response: {e}")
+                raise Exception(f"HTTP Error: {e}")
+
         except Exception as e:
             print("INFO  - Failed to get response: ", e)
             raise Exception
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def fetch_soup(self, url):
         try:
             response = self.session.get(url, timeout=5)
@@ -63,7 +72,7 @@ class CustomRequests:
             print("INFO  - Failed to fetch soup: ", e)
             raise Exception
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def fetch_soup_lxml(self, url):
         try:
             response = self.session.get(url, timeout=5)
@@ -74,7 +83,7 @@ class CustomRequests:
             print("INFO  - Failed to fetch soup: ", e)
             raise Exception
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def save_soup_as_html(self, soup, filename):
         try:
             if soup:
@@ -121,7 +130,7 @@ class CustomWebDriver:
 
         # print(self.options.to_capabilities()) # DEBUG
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def open_driver(self):
         try:
             self.driver = Chrome(options=self.options)
@@ -149,7 +158,7 @@ class CustomWebDriver:
             print("ERROR - Could not initialize driver: ", e)
             raise Exception
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def navigate(self, url):
         print(f"INFO  - Navigating to {url}")
         try:
@@ -159,7 +168,7 @@ class CustomWebDriver:
             print(f"ERROR - Error navigating to {url}: ", e)
             raise Exception
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def fetch_element(self, css_selector):
         print(f"INFO  - Fetching elements with selector: {css_selector[0:41]}")
         try:
@@ -173,7 +182,7 @@ class CustomWebDriver:
 
         return []
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def infinite_scroll(self, scroll_pause_time=10, end_scroll_attempts=3):
         last_height = self.driver.execute_script("return document.body.scrollHeight")
         # footer = self.driver.find_element(By.CSS_SELECTOR, "div.footerstyles__Footer-sc-1ar2w9j-0.jdgzxt")
@@ -207,7 +216,7 @@ class CustomWebDriver:
 
         print("INFO  - Page seems to be fully loaded")
 
-    @retry()
+    @retry(stop_max_attempt_number=3, wait_fixed=3000)
     def close_driver(self):
         try:
             self.driver.close()
