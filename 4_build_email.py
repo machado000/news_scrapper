@@ -44,7 +44,7 @@ def build_report_payload(start_publish_date=None):
     # 2. Match and update document statuses
     matches = mongo_cnx.match_doc_with_keywords(
         collection_name, start_publish_date=start_publish_date, status=status, keyword_list=keyword_list)
-    print(matches)
+    print("DEBUG - ", matches)
 
     mongo_cnx.update_collection("news", matches)
 
@@ -89,13 +89,16 @@ def send_email_report(report_payload_json):
 
     # Setup email parameters
     email_sender = smtp_username
-    email_recipient = "machado000@gmail.com"
+    # email_recipients = ["steven@icomm-net.com"]
+    email_recipients = ["machado000@gmail.com"]
+    # cc_recipients = ["nivaldo@icomm-net.com"]
     email_subject = f"13D Monitor Newsfeed on {current_date}"
 
     # Create the MIME message
     msg = MIMEMultipart()
     msg['From'] = email_sender
-    msg['To'] = email_recipient
+    msg['To'] = ', '.join(email_recipients)
+    # msg['Cc'] = ', '.join(cc_recipients)
     msg['Subject'] = email_subject
 
     # Attach the HTML content
@@ -109,17 +112,18 @@ def send_email_report(report_payload_json):
     with smtplib.SMTP(smtp_host, smtp_port) as server:
         server.starttls()
         server.login(smtp_username, smtp_password)
-        server.sendmail(smtp_username, email_recipient, msg.as_string())
+        server.sendmail(smtp_username, email_recipients, msg.as_string())
 
-    print(f"INFO  - Email sent successfully to recipients [{email_recipient}].")
+    print(f"INFO  - Email sent successfully to recipients {email_recipients}.")
 
 
 if __name__ == "__main__":
 
     current_datetime = datetime.now()
-    two_days_ago = current_datetime - timedelta(days=2)
+    days_ago = current_datetime - timedelta(days=2)
+    start_publish_date = days_ago
 
-    report_payload = build_report_payload(start_publish_date=two_days_ago)
+    report_payload = build_report_payload(start_publish_date=days_ago)
 
     # # Load JSON data
     # with open(f"{files_path}/report_payload.json", "r", encoding="utf-8") as json_file:
