@@ -14,7 +14,8 @@ import requests
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
-from selenium.webdriver import Edge, EdgeOptions
+from selenium.webdriver import Chrome, ChromeOptions
+# from selenium.webdriver import Edge, EdgeOptions
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 
@@ -90,7 +91,7 @@ class CustomWebDriver:
 
     def __init__(self, username=None, password=None, endpoint=None, port=None):
 
-        self.options = EdgeOptions()
+        self.options = ChromeOptions()
         self.options.use_chromium = True  # Use Chromium-based Edge
         # self.options.add_argument("--headless=new")
         self.options.add_argument("--no-sandbox")
@@ -98,11 +99,16 @@ class CustomWebDriver:
         self.options.add_argument("--disable-blink-features")
         self.options.add_argument("--disable-blink-features=AutomationControlled")
         self.options.add_argument("--disable-gpu")
+        self.options.add_argument("--disable-infobars")
         # self.options.add_argument('--disable-javascript')  # EXPERIMENTAL
         self.options.add_argument("--ignore-certificate-errors")
         self.options.add_argument("--ignore-ssl-errors")
+        self.options.add_argument("--incognito")
         self.options.add_argument("--window-size=1920,1200")
+        self.options.add_experimental_option("excludeSwitches", ['enable-automation'])
         self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
+        self.options.add_experimental_option('useAutomationExtension', False)
+        self.options.add_experimental_option("detach", True)  # DEBUG
 
         self.ua = UserAgent(browsers=["edge", "chrome", "firefox"], os=["windows", "macos"], min_percentage=0.03)
         # fallback="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:116.0) Gecko/20100101 Firefox/116.0"
@@ -118,11 +124,15 @@ class CustomWebDriver:
     @retry()
     def open_driver(self):
         try:
-            self.driver = Edge(options=self.options)
+            self.driver = Chrome(options=self.options)
+            self.driver.delete_all_cookies()
+            self.driver.implicitly_wait(1)
+            self.driver.set_window_position(0, 0)
+            # Change the property value of the  navigator  for webdriver to undefined
+            self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
-            width = self.driver.get_window_size().get("width")
             height = self.driver.get_window_size().get("height")
-            # self.driver.implicitly_wait(0.5)
+            width = self.driver.get_window_size().get("width")
             user_agent = self.driver.execute_script("return navigator.userAgent;")
             self.driver.get("https://ipinfo.io/ip")
             body_element = self.driver.find_element(By.TAG_NAME, "body")
