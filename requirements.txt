@@ -5,6 +5,7 @@ rapidfuzz
 jinja2
 openai
 pandas
+pendulum
 pymongo
 python-dotenv
 requests
