@@ -1,3 +1,4 @@
+#!/home/master/apps/13dnews/venv/bin/python3
 '''
 news_scrapper
 v.2023-10-02
@@ -59,7 +60,7 @@ def convert_date_string_to_iso(date_str):
 
 def filter_news_dict(news_obj_list, keyword_list):
     # Filter articles with keywords
-    print(f"INFO  - Filtering {len(news_obj_list)} items for keywords.")
+    print(f"\nINFO  - Filtering {len(news_obj_list)} items for keywords.")
     filtered_list = []
 
     for news_item in news_obj_list:
@@ -73,7 +74,7 @@ def filter_news_dict(news_obj_list, keyword_list):
             if fuzz.partial_ratio(keyword, title) >= threshold:
                 news_item['keyword'] = keyword  # Add the matching keyword to news_item
                 filtered_list.append(news_item)
-                print(f"INFO  - Keyword '{keyword}' match on '{title}'")
+                print(f"INFO  - Keyword '{keyword}' match on '{title[0:100]}'")
                 break  # Exit the loop once a match is found
 
     print(f"INFO  - Found {len(filtered_list)} matches.")
@@ -241,7 +242,7 @@ if __name__ == "__main__":
 
     with open(f"./{files_path}/bing_last_results.json", "w", encoding="utf-8") as file:
         file.write(filtered_results_json)
-    print(f"INFO  - Saved {len(filtered_results)} results on '{files_path}/bing_last_results.json'")
+    print(f"\nINFO  - Saved {len(filtered_results)} results on '{files_path}/bing_last_results.json'")
 
     # Upsert final list on mongodb "news_db.news"
     mongo_cnx.insert_documents("news", filtered_results)
@@ -265,7 +266,7 @@ if __name__ == "__main__":
 
     with open(f"{files_path}/rss_last_results.json", "w", encoding="utf-8") as file:
         file.write(filtered_results_json)
-    print(f"INFO  - Saved {len(filtered_results)} results on '{files_path}/rss_last_results.json'")
+    print(f"\nINFO  - Saved {len(filtered_results)} results on '{files_path}/rss_last_results.json'")
 
     # Insert matches on mongodb "news_db.news"
     mongo_cnx.insert_documents("news", filtered_results)
