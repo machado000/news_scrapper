@@ -75,7 +75,7 @@ def build_report_payload(start_publish_date=None):
     return payload
 
 
-def send_email_report(report_payload_json):
+def send_email_report(report_payload_json, email_recipients, cc_recipients=None):
     # 4. Generate Jinja2 report template
     # Load the Jinja template
     env = Environment(loader=FileSystemLoader('.'))
@@ -89,16 +89,13 @@ def send_email_report(report_payload_json):
 
     # Setup email parameters
     email_sender = smtp_username
-    # email_recipients = ["steven@icomm-net.com"]
-    email_recipients = ["machado000@gmail.com"]
-    # cc_recipients = ["nivaldo@icomm-net.com"]
     email_subject = f"13D Monitor Newsfeed on {current_date}"
 
     # Create the MIME message
     msg = MIMEMultipart()
     msg['From'] = email_sender
     msg['To'] = ', '.join(email_recipients)
-    # msg['Cc'] = ', '.join(cc_recipients)
+    msg['Cc'] = ', '.join(cc_recipients)
     msg['Subject'] = email_subject
 
     # Attach the HTML content
@@ -120,7 +117,7 @@ def send_email_report(report_payload_json):
 if __name__ == "__main__":
 
     current_datetime = datetime.now()
-    days_ago = current_datetime - timedelta(days=2)
+    days_ago = current_datetime - timedelta(days=365)
     start_publish_date = days_ago
 
     report_payload = build_report_payload(start_publish_date=days_ago)
@@ -130,4 +127,8 @@ if __name__ == "__main__":
     #     report_payload = json.load(json_file)
     # print("DEBUG - Loaded JSON data ", type(report_payload))
 
-    send_email_report(report_payload)
+    # email_recipients = ["steven@icomm-net.com"]
+    email_recipients = ["machado000@gmail.com"]
+    cc_recipients = ["nivaldo@icomm-net.com"]
+
+    send_email_report(report_payload, email_recipients, cc_recipients)
