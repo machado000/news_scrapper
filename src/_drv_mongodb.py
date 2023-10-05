@@ -43,7 +43,8 @@ class MongoCnx():
             # Access the collection in MongoDB
             collection = self.db[collection_name]
 
-            inserted_documents_count = 0
+            inserted_doc_count = 0
+            duplicate_doc_count = 0
 
             for document in document_list:
 
@@ -60,10 +61,12 @@ class MongoCnx():
                     document['last_modified'] = datetime.now()
 
                     collection.insert_one(document)
-                    inserted_documents_count += 1
+                    inserted_doc_count += 1
+                else:
+                    duplicate_doc_count += 1
 
             print(
-                f"INFO  - Inserted {inserted_documents_count} new documents \
+                f"INFO  - Found {duplicate_doc_count} duplicates, inserted {inserted_doc_count} new documents \
 into '{self.db.name}' collection '{collection.name}'")
             return None
 
@@ -245,11 +248,11 @@ into '{self.db.name}' collection '{collection.name}'")
 
             projection = {
                 "_id": 1,
-                "domain": 1,
                 "publish_date": 1,
-                "summary": 1,
-                "title": 1,
+                "domain": 1,
                 "url": 1,
+                "title": 1,
+                "summary": 1,
                 "status": 1,
             }
             sort_parameter = [("publish_date", 1)]
