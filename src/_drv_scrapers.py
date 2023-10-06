@@ -44,47 +44,39 @@ class CustomRequests:
         print(f"INFO  - Success opening 'requests' session with proxy ip '{soup.text}'")
 
     @retry()
-    def get_response(self, url):
+    def get_response(self, url, **kwargs):
         try:
-            response = self.session.get(url, timeout=5)
+            response = self.session.get(url, timeout=5, **kwargs)
             response.raise_for_status()  # Raise an exception for HTTP error status codes
             return response
 
         except HTTPError as e:
-            if e.response.status_code == 429:
+            if e.response.status_code == 403 or e.response.status_code == 429:
                 print("INFO - 'Too Many Requests' error. Retrying...")
                 raise  # This will trigger the retry mechanism
-            else:
-                print(f"INFO - Failed to get response: {e}")
-                raise Exception(f"HTTP Error: {e}")
 
         except Exception as e:
             print("INFO  - Failed to get response: ", e)
-            raise Exception
+            raise Exception(f"HTTP Error: {e}")
 
-    @retry()
     def fetch_soup(self, url):
         try:
-            response = self.session.get(url, timeout=5)
-            response.raise_for_status()  # Raise an exception for HTTP error status codes
+            response = self.get_response(url)
             soup = BeautifulSoup(response.text, "html.parser")
             return soup
         except Exception as e:
             print("INFO  - Failed to fetch soup: ", e)
             raise Exception
 
-    @retry()
     def fetch_soup_lxml(self, url):
         try:
-            response = self.session.get(url, timeout=5)
-            response.raise_for_status()  # Raise an exception for HTTP error status codes
+            response = self.get_response(url)
             soup = BeautifulSoup(response.text, features="xml")
             return soup
         except Exception as e:
             print("INFO  - Failed to fetch soup: ", e)
             raise Exception
 
-    @retry()
     def save_soup_as_html(self, soup, filename):
         try:
             if soup:
@@ -95,6 +87,27 @@ class CustomRequests:
         except Exception as e:
             print("ERROR - Unable to save HTML content: ", e)
             raise Exception
+
+    @retry()
+    def get_redirected_url(self, url):
+        cookies = {'CONSENT': 'YES+cb.20220419-08-p0.cs+FX+111'}
+
+        try:
+            response = self.session.get(url, cookies=cookies)
+            # response.raise_for_status()
+            # final_url = response.url
+            soup = BeautifulSoup(response.text, 'html.parser')
+            final_url = soup.a['href']
+            return final_url
+
+        except HTTPError as e:
+            if e.response.status_code == 403 or e.response.status_code == 429:
+                print("INFO - 'Too Many Requests' error. Retrying...")
+                raise  # This will trigger the retry mechanism
+
+        except Exception as e:
+            print("INFO  - Failed to get response: ", e)
+            raise Exception(f"HTTP Error: {e}")
 
 
 class CustomWebDriver:
@@ -137,7 +150,7 @@ class CustomWebDriver:
             self.driver = Chrome(options=self.options)
             self.driver.delete_all_cookies()
             self.driver.implicitly_wait(1)
-            self.driver.set_window_position(0, 0)
+            self.driver.set_window_position(2560, 0)
             # Change the property value of the  navigator  for webdriver to undefined
             self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
 
