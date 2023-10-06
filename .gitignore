@@ -161,7 +161,8 @@ cython_debug/
 
 # User custom files
 /files
-/news_data
+/html_files
+/json_files
 draft.py
 temp*
 *.json
