@@ -42,18 +42,19 @@ class MongoCnx():
         try:
             # Access the collection in MongoDB
             collection = self.db[collection_name]
+            new_document_list = document_list[:]
 
             inserted_doc_count = 0
             duplicate_doc_count = 0
 
-            for document in document_list:
+            for document in new_document_list:
 
                 # Check if the document with the same _id already exists
                 existing_document = collection.find_one({"_id": document["_id"]})
 
                 if existing_document is None:
                     # Document with the same _id doesn't exist, insert the new document
-                    if 'publish_date' in document:
+                    if 'publish_date' in document and not isinstance(document['publish_date'], datetime):
                         # Convert the 'publish_date' string to a Python datetime object
                         parsed_date = pendulum.parse(document['publish_date'])
                         document['publish_date'] = parsed_date
@@ -88,13 +89,14 @@ into '{self.db.name}' collection '{collection.name}'")
         try:
             # Access the collection in MongoDB
             collection = self.db[collection_name]
+            new_document_list = document_list[:]
 
             new_documents_count = 0
             updated_documents_count = 0
 
-            for document in document_list:
+            for document in new_document_list:
                 filter_condition = {"_id": document["_id"]}
-                if 'publish_date' in document:
+                if 'publish_date' in document and not isinstance(document['publish_date'], datetime):
                     # Convert the 'publish_date' string to a Python datetime object
                     parsed_date = pendulum.parse(document['publish_date'])
                     document['publish_date'] = parsed_date
