@@ -32,9 +32,8 @@ wsj_password = os.getenv('WSJ_PASSWORD')
 bing_apikey = os.getenv('BING_APIKEY')
 # print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
 
-files_path = "./news_data"
-if not os.path.exists(files_path):
-    os.makedirs(files_path)
+html_files_path, json_files_path = "./html_files", "./json_files"
+[os.makedirs(path) for path in [html_files_path, json_files_path] if not os.path.exists(path)]
 
 
 def clean_text(text_str):
@@ -174,15 +173,15 @@ def parse_article_text(soup, domain):
     return cleaned_text
 
 
-def parse_wsl_webpages(start_publish_date):
+def parse_wsl_webpages(collection_name, days_ago=2, status="fetched"):
 
     # 0. Initial settings
     mongo_cnx = MongoCnx("news_db")
+    date_obj = datetime.now() - timedelta(days=days_ago)
+    start_publish_date = date_obj.isoformat()
+    domain = "wsj.com"
 
     # 1. list articles to be scraped
-    collection_name = "news"
-    domain = "www.wsj.com"
-    status = "fetched"
     articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
                                       start_publish_date=start_publish_date, status=status)
 
@@ -206,22 +205,38 @@ def parse_wsl_webpages(start_publish_date):
 
     for idx, item in enumerate(articles, start=1):
         try:
-            soup = fetch_page_soup(driver, item["url"])
+            file_path = f"{html_files_path}/{item['_id']}.html"
 
-            # Save local HTML file
-            html_file_path = f"{files_path}/{item['_id']}.html"
-            with open(html_file_path, "w", encoding="utf-8") as file:
-                file.write(soup.prettify())
+            if os.path.exists(file_path):
+                print(f"INFO  - Found page source on {file_path}")
+
+                with open(file_path, "r", encoding="utf-8") as html_file:
+                    html_content = html_file.read()
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+            else:
+                # Fetch page
+                soup = fetch_page_soup(driver, item["url"])
+
+                # Save local HTML file
+                with open(file_path, "w", encoding="utf-8") as file:
+                    file.write(soup.prettify())
+                print(f"INFO  - Saved page source on {file_path}")
 
             # Extract TXT from article body
-            collection = mongo_cnx.db["selectors"]
-            selector = collection.find_one({"domain": item['domain']})
-            # print(f'DEBUG - domain: {selector["domain"]}, selector: {selector["element"]}')
+            article_element = soup.find("article")
+            section_element = soup.find("section")
 
-            if selector["selector"] == "element":
-                article_body = soup.find(selector["element"])
+            if article_element and article_element.text:
+                article_body_text = article_element.text
+                print("INFO  - article_body_text:", article_body_text[0:300])
 
-            article_body_text = article_body.text
+            elif section_element and section_element.text:
+                article_body_text = section_element.text
+                print("INFO  - article_body_text:", article_body_text[0:300])
+
+            else:
+                print(f"ERROR - Cant find article element on page source {item['_id']}.html ")
 
             content_entry = {
                 "_id": item['_id'],
@@ -237,14 +252,14 @@ def parse_wsl_webpages(start_publish_date):
             print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+    with open(f"{json_files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
         json.dump(articles_contents, json_file)
 
     # 4. Update Mongodb with new article summaries
-    with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
+    with open(f"{json_files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
         articles_contents = json.load(json_file)
 
-    mongo_cnx.update_collection("news", articles_contents)
+    mongo_cnx.update_collection(collection_name, articles_contents)
 
 
 def parse_free_webpages(start_publish_date, domain=None):
@@ -254,7 +269,8 @@ def parse_free_webpages(start_publish_date, domain=None):
 
     # 1. list articles to be scraped
     collection_name = "news"
-    # domain = "markets.businessinsider.com"  # DEBUG
+    domain = "www.msn.com"  # DEBUG
+    start_publish_date = datetime.now() - timedelta(days=2)  # DEBUG
     status = "fetched"
     articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
                                       start_publish_date=start_publish_date, status=status)
@@ -273,16 +289,19 @@ def parse_free_webpages(start_publish_date, domain=None):
     # 3. Fetch and save page HTML soup and article_body.text
     articles_contents = []
     total_count = len(articles)
-    # item = articles[0]  # DEBUG
-    # print("DEBUG - ", item)
+    item = articles[0]  # DEBUG
+    print("DEBUG - ", item)
 
     for idx, item in enumerate(articles, start=1):
         try:
             soup = fetch_page_soup(driver, item["url"])
             # print("DEBUG - ", soup.prettify())
 
+            session = CustomRequests(proxy_username, proxy_password, proxy_server, proxy_port)
+            soup = session.fetch_soup(item["url"])
+
             # Save local HTML file
-            html_file_path = f"{files_path}/{item['_id']}.html"
+            html_file_path = f"{html_files_path}/{item['_id']}.html"
             with open(html_file_path, "w", encoding="utf-8") as file:
                 file.write(soup.prettify())
 
@@ -291,9 +310,8 @@ def parse_free_webpages(start_publish_date, domain=None):
             selector = collection.find_one({"domain": domain})  # DEBUG
             print(selector)  # DEBUG
 
-            # element_list = soup.select(f'div[class*="news-article__body"]')
-            # element = element_list[0]
-            # article_body_text = element.text
+            element = soup.find("article")  # DEBIG
+            article_body_text = element.text  # DEBUG
             article_body_text = parse_article_text(soup=soup, domain=item['domain'])
             print(f"DEBUG - article_body_text: {article_body_text[0:500]}...")
 
@@ -321,11 +339,11 @@ def parse_free_webpages(start_publish_date, domain=None):
             print(f"ERROR - {idx}/{total_count} - Error parsing {item['url']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"{files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+    with open(f"{json_files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
         json.dump(articles_contents, json_file)
 
     # 4. Update Mongodb with new article summaries
-    with open(f"{files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
+    with open(f"{json_files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
         articles_contents = json.load(json_file)
 
     mongo_cnx.update_collection("news", articles_contents)
@@ -333,20 +351,19 @@ def parse_free_webpages(start_publish_date, domain=None):
 
 if __name__ == "__main__":
 
-    current_datetime = datetime.now()
-    days_ago = current_datetime - timedelta(days=2)
-    start_publish_date = days_ago
+    days_ago = 10
 
     # Parse WSJ
-    parse_wsl_webpages(start_publish_date=days_ago)
+    parse_wsl_webpages(collection_name="news_unprocessed", days_ago=days_ago, status="fetched")
 
-    # Parse FREE news_sites
+    # # Parse FREE news_sites
     # valid_domains = [
+    #     "www.msn.com",
     #     # "markets.businessinsider.com",
-    #     "www.insidermonkey.com",
-    #     "www.nasdaq.com",
+    #     # "www.insidermonkey.com",
+    #     # "www.nasdaq.com",
     #     # "www.thestreet.com",
-    #     "www.morningstar.com",
+    #     # "www.morningstar.com",
     # ]
 
     # for domain in valid_domains:
