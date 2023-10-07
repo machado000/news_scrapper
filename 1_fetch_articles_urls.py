@@ -30,9 +30,8 @@ wsj_password = os.getenv("WSJ_PASSWORD")
 bing_apikey = os.getenv("BING_APIKEY")
 # print(proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey)  # noqa
 
-files_path = "./news_data"
-if not os.path.exists(files_path):
-    os.makedirs(files_path)
+html_files_path, json_files_path = "./html_files", "./json_files"
+[os.makedirs(path) for path in [html_files_path, json_files_path] if not os.path.exists(path)]
 
 
 def convert_date_string_to_iso(date_str):
@@ -158,7 +157,7 @@ def extract_google_news_rss(handler, rss_url):
 
     try:
         # Use the session object to fetch the RSS feed
-        print(f"\nINFO  - Fetching articles on RSS Feed '{rss_url[0:120]}'")
+        print(f"\nINFO  - Fetching entries on feed '{rss_url[0:100]}'")
         response = handler.get_response(rss_url)
         response.raise_for_status()
 
@@ -326,7 +325,7 @@ if __name__ == "__main__":
     for rss_url in commom_rss_url_list:
         result = extract_commom_news_rss(handler, rss_url)
         commom_rss_results.extend(result)
-    print("\n".join([f"DEBUG - {item['url']}" for item in commom_rss_results]))
+    # print("\n".join([f"DEBUG - {item['url']}" for item in commom_rss_results]))
     print(f"DEBUG - Found {len(commom_rss_results)} results in commom RSS")
 
     # Build Google News RSS links
@@ -390,17 +389,13 @@ if __name__ == "__main__":
     # Save local JSON
     valid_results_json = json.dumps(valid_results, ensure_ascii=False, indent=4)
 
-    # mongo_cnx.insert_documents("news_unprocessed", valid_results)
-    mongo_cnx.update_collection("news_unprocessed", valid_results)
+    mongo_cnx.insert_documents("news_unprocessed", valid_results)
 
-    print(commom_rss_results[0])
-    print(valid_results[0])
-
-    with open(f"{files_path}/valid_results_json.json", "w", encoding="utf-8") as file:
+    with open(f"{json_files_path}/valid_results_json.json", "w", encoding="utf-8") as file:
         file.write(valid_results_json)
-    print(f"\nINFO  - Saved file on results on '{files_path}/valid_results_json")
+    print(f"\nINFO  - Saved file on results on '{json_files_path}/valid_results_json")
 
-    # with open(f"{files_path}/valid_results_json.json", "r", encoding="utf-8") as json_file:
+    # with open(f"{json_files_path}/valid_results_json.json", "r", encoding="utf-8") as json_file:
     #     valid_results = json.load(json_file)
 
     # Filter titles for keywords
@@ -410,7 +405,7 @@ if __name__ == "__main__":
 
     # Insert matches on mongodb "news_db.news"
 
-    mongo_cnx.update_collection("news", filtered_results)
+    mongo_cnx.insert_documents("news", filtered_results)
 
     # =============== 1. FETCH URLS FROM BING API, UPDATE MONGODB ===============
     # collection = mongo_cnx.db['sources']
@@ -434,9 +429,9 @@ if __name__ == "__main__":
     # # Save local JSON
     # filtered_results_json = json.dumps(filtered_results, ensure_ascii=False, indent=4)
 
-    # with open(f"./{files_path}/bing_last_results.json", "w", encoding="utf-8") as file:
+    # with open(f"./{json_files_path}/bing_last_results.json", "w", encoding="utf-8") as file:
     #     file.write(filtered_results_json)
-    # print(f"\nINFO  - Saved {len(filtered_results)} results on '{files_path}/bing_last_results.json'")
+    # print(f"\nINFO  - Saved {len(filtered_results)} results on '{json_files_path}/bing_last_results.json'")
 
     # # Upsert final list on mongodb "news_db.news"
     # mongo_cnx.insert_documents("news", filtered_results)

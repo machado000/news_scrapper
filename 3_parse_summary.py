@@ -20,9 +20,8 @@ load_dotenv()
 openai_apikey = os.getenv('OPENAI_APIKEY')
 # print("DEBUG - ", proxy_username, proxy_password, proxy_server, proxy_port, wsj_username, wsj_password, bing_apikey, openai_apikey) # noqa
 
-files_path = "./news_data"
-if not os.path.exists(files_path):
-    os.makedirs(files_path)
+html_files_path, json_files_path = "./html_files", "./json_files"
+[os.makedirs(path) for path in [html_files_path, json_files_path] if not os.path.exists(path)]
 
 
 def clean_text(text_str):
@@ -79,7 +78,7 @@ def openai_summarize_text(input_text):
         # keywords = response_2['choices'][0]['message']['content']
 
         if summary:
-            print(f"INFO  - Response: '{summary[:100]}...'")
+            print(f"INFO  - Response: '{summary[:120]}...'")
 
         return summary
 
@@ -92,9 +91,10 @@ if __name__ == "__main__":
 
     # 0. Initial settings
     mongo_cnx = MongoCnx("news_db")
+    file_path = f"{json_files_path}/articles_summaries.json"
 
     # 1. list articles to be summarized
-    collection_name = "news"
+    collection_name = "news_unprocessed"
     domain = None
     start_date = None  # datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"
@@ -133,12 +133,12 @@ if __name__ == "__main__":
             print(f"ERROR - {idx}/{total_count} - Error fetching summary for document {item['_id']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
-    with open(f"{files_path}/articles_summaries.json", "w", encoding="utf-8") as json_file:
+    with open(file_path, "w", encoding="utf-8") as json_file:
         json.dump(articles_summaries, json_file)
 
     # 4. Update Mongodb with new article summaries
-    with open(f"{files_path}/articles_summaries.json", "r", encoding="utf-8") as json_file:
+    with open(file_path, "r", encoding="utf-8") as json_file:
         articles_contents = json.load(json_file)
 
     mongo_cnx = MongoCnx("news_db")
-    mongo_cnx.update_collection("news", articles_summaries)
+    mongo_cnx.update_collection(collection_name, articles_summaries)
