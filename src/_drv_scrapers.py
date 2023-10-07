@@ -9,8 +9,8 @@ v.2023-09-05
 import os
 import time
 import zipfile
-
 import requests
+
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fake_useragent import UserAgent
@@ -127,6 +127,8 @@ class CustomWebDriver:
         self.options.add_argument("--ignore-certificate-errors")
         self.options.add_argument("--ignore-ssl-errors")
         self.options.add_argument("--incognito")
+        user_data_dir = "C:/Users/joaom/Projetos/13dnews/webdriver_data"
+        self.options.add_argument(f"--user-data-dir={user_data_dir}")
         self.options.add_argument("--window-size=1920,1200")
         self.options.add_experimental_option("excludeSwitches", ['enable-automation'])
         self.options.add_experimental_option('excludeSwitches', ['enable-logging'])
@@ -141,7 +143,6 @@ class CustomWebDriver:
         self.options.add_extension(self.proxies_extension)
 
         self.driver = None
-
         # print(self.options.to_capabilities()) # DEBUG
 
     @retry()
