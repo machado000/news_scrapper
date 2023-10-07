@@ -54,6 +54,63 @@ def get_redirected_url(url):
 
 
 @retry()
+def login_financialtimes(driver):
+    """
+    Login to https://accounts.ft.com/login and parse username and passord.
+
+    Args:
+    - driver (object) Selenium Chromium webdriver object.
+
+    Returns:
+    - None.
+    - Browser on logged state.
+    """
+    # Open the login page
+    login_url = "https://accounts.ft.com/login"
+    # mongo_cnx = MongoCnx("news_db")
+    username = "ksquire@icomm-net.com"
+    password = "financialtimes13d"
+
+    print(f"INFO  - Navigating to {login_url}")
+    driver.get(login_url)
+
+    try:
+        element_present = EC.presence_of_element_located((By.ID, "enter-email-next"))
+        WebDriverWait(driver=driver, timeout=20).until(element_present)
+        print("INFO  - Page fully loaded!")
+    except TimeoutException:
+        print("ERROR - Timed out waiting for page to load")
+
+    # First screen
+    username_field = driver.find_element(By.ID, "enter-email")
+    username_field.send_keys(username)
+
+    continue_button = driver.find_element(By.ID, 'enter-email-next')
+    continue_button.click()
+
+    # Second screen
+    sleep(2)
+    password_field = driver.find_element(By.ID, 'enter-password')
+    # By.CSS_SELECTOR, 'input#enter-email[type="email"][name="email"][placeholder="Enter your email address"]')
+    password_field.send_keys(password)
+
+    login_button = driver.find_element(By.ID, 'sign-in-button')
+    login_button.click()
+
+    # try:
+    #     element_present = EC.presence_of_element_located(
+    #         (By.CSS_SELECTOR, 'a.o-header__subnav-link[data-trackable="Sign Out"]'))
+    #     WebDriverWait(driver=driver, timeout=40).until(element_present)
+    #     print("INFO  - Button 'SIGN OUT' was found on page \nINFO  - Login with success !")
+    # except TimeoutException:
+    #     print("ERROR - Timed out waiting for page to load")
+    # except NoSuchElementException:
+    #     print("ERROR - Button 'SIGN OUT' not found on page")
+
+    return None
+
+
+@retry()
 def login_wsj(driver):
     """
     Login to https://session.wsj.com and parse username and passord.
@@ -173,7 +230,98 @@ def parse_article_text(soup, domain):
     return cleaned_text
 
 
-def parse_wsl_webpages(collection_name, days_ago=2, status="fetched"):
+def parse_ft_webpages(driver, collection_name, days_ago=2, status="fetched"):
+
+    # 0. Initial settings
+    mongo_cnx = MongoCnx("news_db")
+    date_obj = datetime.now() - timedelta(days=days_ago)
+    start_publish_date = date_obj.isoformat()
+    domain = "ft.com"
+
+    # 1. list articles to be scraped
+    articles = mongo_cnx.get_doc_list(collection_name=collection_name, domain=domain,
+                                      start_publish_date=start_publish_date, status=status)
+
+    if articles == []:
+        print("INFO  - Exiting program. No documents where found.")
+        sys.exit()
+
+    print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:",
+          articles[-1]["publish_date"], "url:", articles[-1]["url"])
+
+    # 3-A. Login to Wall Street (Journal WSJ)
+    # login_financialtimes(driver)
+
+    # 3-B. Fetch and save page HTML soup and article_body.text
+    articles_contents = []
+    total_count = len(articles)
+    # item = articles[-1]
+
+    for idx, item in enumerate(articles, start=1):
+        try:
+            file_path = f"{html_files_path}/{item['_id']}.html"
+
+            if os.path.exists(file_path):
+                print(f"INFO  - Found page source on {file_path}")
+
+                with open(file_path, "r", encoding="utf-8") as html_file:
+                    html_content = html_file.read()
+                soup = BeautifulSoup(html_content, 'html.parser')
+
+            else:
+                # Fetch page
+                soup = fetch_page_soup(driver, item["url"])
+
+                # Save local HTML file
+                with open(file_path, "w", encoding="utf-8") as file:
+                    file.write(soup.prettify())
+                print(f"INFO  - Saved page source on {file_path}")
+
+            # Extract TXT from article body
+            article_body_element = soup.find(By.ID, "article-body")
+            article_element = soup.find("article")
+            section_element = soup.find("section")
+
+            if article_element and article_element.text:
+                article_body_text = article_element.text
+                print("INFO  - article_body_text:", article_body_text[0:300])
+
+            elif article_body_element and article_body_element.text:
+                article_body_text = article_body_element.text
+                print("INFO  - article_body_text:", article_body_text[0:300])
+
+            elif section_element and section_element.text:
+                article_body_text = section_element.text
+                print("INFO  - article_body_text:", article_body_text[0:300])
+
+            else:
+                print(f"ERROR - Cant find article element on page source {item['_id']}.html ")
+
+            content_entry = {
+                "_id": item['_id'],
+                "content": article_body_text,
+                "status": "content_parsed",
+            }
+
+            articles_contents.append(content_entry)
+
+            print(f"INFO  - {idx}/{total_count} articles fetched and parsed content.")
+
+        except Exception as e:
+            print(f"ERROR - {idx}/{total_count} - Error fetching {item['url']}: {str(e)}")
+            continue  # Continue to the next item in case of an error
+
+    with open(f"{json_files_path}/articles_contents.json", "w", encoding="utf-8") as json_file:
+        json.dump(articles_contents, json_file)
+
+    # 4. Update Mongodb with new article summaries
+    with open(f"{json_files_path}/articles_contents.json", "r", encoding="utf-8") as json_file:
+        articles_contents = json.load(json_file)
+
+    mongo_cnx.update_collection(collection_name, articles_contents)
+
+
+def parse_wsl_webpages(driver, collection_name, days_ago=2, status="fetched"):
 
     # 0. Initial settings
     mongo_cnx = MongoCnx("news_db")
@@ -190,11 +338,6 @@ def parse_wsl_webpages(collection_name, days_ago=2, status="fetched"):
         sys.exit()
 
     print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
-
-    # 2. Start Selenium Chrome Webdriver
-    handler = CustomWebDriver(username=proxy_username, password=proxy_password,
-                              endpoint=proxy_server, port=proxy_port)
-    driver = handler.open_driver()
 
     # 3-A. Login to Wall Street (Journal WSJ)
     login_wsj(driver)
@@ -351,10 +494,21 @@ def parse_free_webpages(start_publish_date, domain=None):
 
 if __name__ == "__main__":
 
+    handler = CustomWebDriver(username=proxy_username, password=proxy_password,
+                              endpoint=proxy_server, port=proxy_port)
+    driver = handler.open_driver()
+
+    collection_name = "news_unprocessed"
     days_ago = 10
+    status = "fetched"
 
     # Parse WSJ
-    parse_wsl_webpages(collection_name="news_unprocessed", days_ago=days_ago, status="fetched")
+    parse_wsl_webpages(driver=driver, collection_name=collection_name, days_ago=days_ago, status=status)
+
+    # Parse Financial Times
+    login_financialtimes(driver)
+
+    parse_ft_webpages(driver=driver, collection_name=collection_name, days_ago=days_ago, status=status)
 
     # # Parse FREE news_sites
     # valid_domains = [
