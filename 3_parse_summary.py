@@ -12,7 +12,6 @@ from datetime import datetime  # noqa
 import openai
 from dotenv import load_dotenv
 
-from src._decorators import retry
 from src._drv_mongodb import MongoCnx
 
 # Load variables from .env
@@ -34,7 +33,6 @@ def clean_text(text_str):
     return cleaned_text
 
 
-@retry()
 def openai_summarize_text(input_text):
     try:
         print("INFO  - Querying OpenAI for article text summary.")
@@ -113,6 +111,7 @@ if __name__ == "__main__":
     total_count = len(articles)
 
     for idx, item in enumerate(articles, start=1):
+        print(f"\nINFO  - Fetching summary for document {item['_id']}.")
         try:
             # Send article text to openai and fetch summary
             article_body_text = item['content']
@@ -127,10 +126,17 @@ if __name__ == "__main__":
             }
 
             articles_summaries.append(summary_entry)
-            print(f"INFO  - {idx}/{total_count}   - article {item['_id']} summarized.")
+            print(f"INFO  - {idx}/{total_count}   - article {item['title']} summarized.")
 
         except Exception as e:
-            print(f"ERROR - {idx}/{total_count} - Error fetching summary for document {item['_id']}: {str(e)}")
+            summary_entry = {
+                "_id": item['_id'],
+                "summary": None,
+                "status": "invalid_summary",
+            }
+
+            articles_summaries.append(summary_entry)
+            print(f"ERROR - {idx}/{total_count} - Failure fetching summary for document {item['_id']}: {str(e)}")
             continue  # Continue to the next item in case of an error
 
     with open(file_path, "w", encoding="utf-8") as json_file:
