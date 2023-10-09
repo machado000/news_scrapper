@@ -269,7 +269,7 @@ def request_bing_news_urls(handler, query, results_count=100, freshness="day"):
 
             extracted_entry = {
                 "_id": url_hash,
-                # "source": "Bing",
+                "source": "Bing",
                 "category": entry.get("category", ""),
                 "domain": domain,
                 "publish_date": entry.get("datePublished", ""),
@@ -315,7 +315,7 @@ if __name__ == "__main__":
     allowed_domains = collection.distinct("domain", {"active": True})
     print("\n".join([f"DEBUG - allowed_domains: {item}" for item in allowed_domains]))
 
-    # =============== 2. FETCH URLS FROM RSS FEEDS, CLEAN, UPDATE MONGODB ===============
+    # =============== 1. FETCH URLS FROM RSS FEEDS ===============
 
     collection = mongo_cnx.db['sources']
     commom_rss_url_list = collection.distinct("rss_list", {"active": True})
@@ -327,6 +327,8 @@ if __name__ == "__main__":
         commom_rss_results.extend(result)
     # print("\n".join([f"DEBUG - {item['url']}" for item in commom_rss_results]))
     print(f"DEBUG - Found {len(commom_rss_results)} results in commom RSS")
+
+    # =============== 2. FETCH URLS FROM GOOGLE NEWS ===============
 
     # Build Google News RSS links
     google_rss_url_list = []
@@ -344,13 +346,26 @@ if __name__ == "__main__":
     # print("\n".join([f"DEBUG - {item['url']}" for item in google_rss_results]))
     print(f"DEBUG - Found {len(google_rss_results)} results in Google News")
 
+    # =============== 3. FETCH URLS FROM BING API ===============
+
+    bing_api_results = []
+
+    for item in keyword_list:
+        keyword = item["keyword"]
+        result = request_bing_news_urls(handler=handler, query=f'"{keyword}"', freshness="day")
+        bing_api_results.extend(result)
+    print(f"DEBUG - Found {len(bing_api_results)} results in Bing News API")
+
+    # =============== 3. FILTER, CLEAN, UPDATE MONGODB ===============
+
     # Join results
     all_results = []
     # Copy for a different memory address
     first_list = [x for x in commom_rss_results] if 'commom_rss_results' in locals() else None
     second_list = [y for y in google_rss_results] if 'google_rss_results' in locals() else None
+    third_list = [z for z in bing_api_results] if 'bing_api_results' in locals() else None
 
-    all_results = first_list + second_list
+    all_results = first_list + second_list + third_list
     print(f"DEBUG - Found {len(all_results)} total results")
 
     # Filter out dates before
@@ -406,32 +421,3 @@ if __name__ == "__main__":
     # Insert matches on mongodb "news_db.news"
 
     mongo_cnx.insert_documents("news", filtered_results)
-
-    # =============== 1. FETCH URLS FROM BING API, UPDATE MONGODB ===============
-    # collection = mongo_cnx.db['sources']
-    # allowed_domains = collection.distinct("domain", {"active": True})
-    # # print("DEBUG - allowed_domains:", allowed_domains)
-
-    # all_results = []
-
-    # for item in keyword_list:
-    #     keyword = item["keyword"]
-    #     result = request_bing_news_urls(handler=handler, query=f'"{keyword}"', freshness="day")
-    #     all_results.extend(result)
-
-    # # Filter allowed domains
-    # domain_results = [item for item in all_results if item['domain'] in allowed_domains]
-    # print(f"\nINFO  - Found {len(domain_results)} entries with valid domains")
-    # # Filter titles for keywords
-    # filtered_results = filter_news_dict(domain_results, keyword_list)
-    # news_obj_list = domain_results
-
-    # # Save local JSON
-    # filtered_results_json = json.dumps(filtered_results, ensure_ascii=False, indent=4)
-
-    # with open(f"./{json_files_path}/bing_last_results.json", "w", encoding="utf-8") as file:
-    #     file.write(filtered_results_json)
-    # print(f"\nINFO  - Saved {len(filtered_results)} results on '{json_files_path}/bing_last_results.json'")
-
-    # # Upsert final list on mongodb "news_db.news"
-    # mongo_cnx.insert_documents("news", filtered_results)
