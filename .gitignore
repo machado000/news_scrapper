@@ -163,8 +163,8 @@ cython_debug/
 /files
 /html_files
 /json_files
+/webdriver_data
 draft.py
 temp*
-*.json
 *.png
 *.zip
