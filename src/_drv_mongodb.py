@@ -103,7 +103,7 @@ into '{self.db.name}' collection '{collection.name}'")
 
                 update_data = {
                     "$set": document,
-                    "$currentDate": {'lastmodified': {"$type": 'date'}}
+                    "$currentDate": {'last_modified': {"$type": 'date'}}
                 }
                 update_result = collection.update_one(filter_condition, update_data, upsert=True)
 
