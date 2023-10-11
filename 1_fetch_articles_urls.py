@@ -100,7 +100,7 @@ def extract_commom_news_rss(handler, rss_url):
         # Use the session object to fetch the RSS feed
         print(f"\nINFO  - Fetching articles on RSS Feed '{rss_url}'")
         response = handler.get_response(rss_url)
-        response.raise_for_status()
+        # response.raise_for_status()
 
         feed_content = response.text
         feed = feedparser.parse(feed_content)
@@ -159,7 +159,7 @@ def extract_google_news_rss(handler, rss_url):
         # Use the session object to fetch the RSS feed
         print(f"\nINFO  - Fetching entries on feed '{rss_url[0:100]}'")
         response = handler.get_response(rss_url)
-        response.raise_for_status()
+        # response.raise_for_status()
 
         feed_content = response.text
         feed = feedparser.parse(feed_content)
@@ -254,35 +254,40 @@ def request_bing_news_urls(handler, query, results_count=100, freshness="day"):
     try:
         # Make the API request
         response = handler.get_response(endpoint, params=params, headers=headers)
-        response.raise_for_status()
+        # response.raise_for_status()
 
         response_data = response.json()
+        print(response_data)
 
-        # Build JSON with results data
-        all_entries = []
+        if 'value' in response_data:
+            # Build JSON with results data
+            all_entries = []
 
-        for entry in response_data['value']:
-            url = entry.get("url", "")
-            url_hash = hashlib.md5(url.encode()).hexdigest()
-            parsed_url = urlparse(url)
-            domain = parsed_url.netloc.replace("www.", "")
+            for entry in response_data['value']:
+                url = entry.get("url", "")
+                url_hash = hashlib.md5(url.encode()).hexdigest()
+                parsed_url = urlparse(url)
+                domain = parsed_url.netloc.replace("www.", "")
 
-            extracted_entry = {
-                "_id": url_hash,
-                "source": "Bing",
-                "category": entry.get("category", ""),
-                "domain": domain,
-                "publish_date": entry.get("datePublished", ""),
-                "title": entry.get("name", ""),
-                "url": url,
-                "status": "fetched",
-            }
+                extracted_entry = {
+                    "_id": url_hash,
+                    "source": "Bing",
+                    "category": entry.get("category", ""),
+                    "domain": domain,
+                    "publish_date": entry.get("datePublished", ""),
+                    "title": entry.get("name", ""),
+                    "url": url,
+                    "status": "fetched",
+                }
 
-            all_entries.append(extracted_entry)
+                all_entries.append(extracted_entry)
 
-        results = all_entries
+            results = all_entries
+
+        else:
+            results = []
+
         print(f"INFO  - Found {len(results)} entries with query '{query}'.")
-
         return results
 
     except HTTPError as e:
@@ -348,13 +353,29 @@ if __name__ == "__main__":
 
     # =============== 3. FETCH URLS FROM BING API ===============
 
-    bing_api_results = []
+    # bing_api_results = []
+    # max_retries, retry_count = 3, 0
 
-    for item in keyword_list:
-        keyword = item["keyword"]
-        result = request_bing_news_urls(handler=handler, query=f'"{keyword}"', freshness="day")
-        bing_api_results.extend(result)
-    print(f"DEBUG - Found {len(bing_api_results)} results in Bing News API")
+    # while not bing_api_results and retry_count < max_retries:
+    #     for item in keyword_list:
+    #         keyword = item["keyword"]
+    #         result = request_bing_news_urls(handler=handler, query=f'"{keyword}"', freshness="day")
+    #         bing_api_results.extend(result)
+
+    #     print(f"DEBUG - Found {len(bing_api_results)} results in Bing News API")
+
+    #     if not bing_api_results and retry_count < max_retries:
+    #         print(
+    #             f"INFO  - Results are empty. Retrying with a new handler. Attempt {retry_count + 1}/{max_retries}")
+
+    #         # Reconfigure the handler
+    #         handler = CustomRequests(username=proxy_username, password=proxy_password,
+    #                                  endpoint=proxy_server, port=proxy_port)
+
+    #     retry_count += 1
+
+    # if not bing_api_results:
+    #     print("INFO - Maximum number of retries reached.")
 
     # =============== 3. FILTER, CLEAN, UPDATE MONGODB ===============
 
@@ -363,9 +384,9 @@ if __name__ == "__main__":
     # Copy for a different memory address
     first_list = [x for x in commom_rss_results] if 'commom_rss_results' in locals() else None
     second_list = [y for y in google_rss_results] if 'google_rss_results' in locals() else None
-    third_list = [z for z in bing_api_results] if 'bing_api_results' in locals() else None
+    # third_list = [z for z in bing_api_results] if 'bing_api_results' in locals() else None
 
-    all_results = first_list + second_list + third_list
+    all_results = first_list + second_list
     print(f"DEBUG - Found {len(all_results)} total results")
 
     # Filter out dates before
