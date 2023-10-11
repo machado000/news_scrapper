@@ -12,6 +12,7 @@ from time import sleep
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
+import random  # noqa
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -321,7 +322,7 @@ def parse_ft_webpages(driver, collection_name, days_ago=2, status="fetched"):
     mongo_cnx.update_collection(collection_name, articles_contents)
 
 
-def parse_wsl_webpages(driver, collection_name, days_ago=2, status="fetched"):
+def parse_wsj_webpages(driver, collection_name, days_ago=2, status="fetched"):
 
     # 0. Initial settings
     mongo_cnx = MongoCnx("news_db")
@@ -334,8 +335,8 @@ def parse_wsl_webpages(driver, collection_name, days_ago=2, status="fetched"):
                                       start_publish_date=start_publish_date, status=status)
 
     if articles == []:
-        print("INFO  - Exiting program. No documents where found.")
-        sys.exit()
+        print("INFO  - Passing. No documents where found with WSJ source.")
+        return None
 
     print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
 
@@ -503,7 +504,7 @@ if __name__ == "__main__":
     status = "fetched"
 
     # Parse WSJ
-    parse_wsl_webpages(driver=driver, collection_name=collection_name, days_ago=days_ago, status=status)
+    parse_wsj_webpages(driver=driver, collection_name=collection_name, days_ago=days_ago, status=status)
 
     # Parse Financial Times
     login_financialtimes(driver)
