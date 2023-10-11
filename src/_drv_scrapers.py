@@ -47,7 +47,6 @@ class CustomRequests:
     def get_response(self, url, **kwargs):
         try:
             response = self.session.get(url, timeout=5, **kwargs)
-            response.raise_for_status()  # Raise an exception for HTTP error status codes
             return response
 
         except HTTPError as e:
