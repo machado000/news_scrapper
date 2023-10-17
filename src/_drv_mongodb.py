@@ -202,6 +202,7 @@ into '{self.db.name}' collection '{collection.name}'")
             projection = {
                 "_id": 1,
                 "publish_date": 1,
+                "title": 1,
                 "content": 1,
                 "status": 1,
             }
