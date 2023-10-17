@@ -12,7 +12,7 @@ from time import sleep
 
 from bs4 import BeautifulSoup
 from dotenv import load_dotenv
-import random  # noqa
+from random import randint  # noqa
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -271,6 +271,9 @@ def parse_ft_webpages(driver, collection_name, days_ago=2, status="fetched"):
 
             else:
                 # Fetch page
+                sleep_time = randint(10, 40)
+                print(f"INFO  - Sleeping for {sleep_time} seconds...")
+                sleep(sleep_time)
                 soup = fetch_page_soup(driver, item["url"])
 
                 # Save local HTML file
@@ -360,6 +363,9 @@ def parse_wsj_webpages(driver, collection_name, days_ago=2, status="fetched"):
 
             else:
                 # Fetch page
+                sleep_time = randint(10, 40)
+                print(f"INFO  - Sleeping for {sleep_time} seconds...")
+                sleep(sleep_time)
                 soup = fetch_page_soup(driver, item["url"])
 
                 # Save local HTML file
