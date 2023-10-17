@@ -160,10 +160,10 @@ cython_debug/
 #.idea/
 
 # User custom files
-/files
-/html_files
-/json_files
-/webdriver_data
+files/
+html_files/
+json_files/
+webdriver_data/
 draft.py
 temp*
 *.png
