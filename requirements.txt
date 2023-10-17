@@ -9,6 +9,5 @@ pendulum
 pymongo
 python-dotenv
 requests
-retrying
 selenium
 webdriver_manager
