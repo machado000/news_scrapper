@@ -4,8 +4,11 @@ v.2023-10-02
 '''
 import json
 import os
+import re
+import string
 import sys
 from datetime import datetime  # noqa
+
 import openai
 from dotenv import load_dotenv
 
@@ -19,6 +22,16 @@ openai_apikey = os.getenv("OPENAI_APIKEY")
 
 html_files_path, json_files_path = "./html_files", "./json_files"
 [os.makedirs(path) for path in [html_files_path, json_files_path] if not os.path.exists(path)]
+
+
+def clean_text(text_str):
+    text_str = re.sub(r'\n', ' ', text_str)
+    text_str = " ".join(text_str.split())
+
+    valid_chars = set(string.printable)
+    cleaned_text = "".join(char for char in text_str if char in valid_chars)
+
+    return cleaned_text
 
 
 def openai_score_text(input_text, keyword_list):
@@ -69,19 +82,23 @@ if __name__ == "__main__":
     file_path = f"{json_files_path}/articles_scores.json"
 
     # 1. list articles to be scored
-    collection_name = "news_unprocessed"
-    domain = None
-    start_date = None  # datetime(2023, 10, 1, 12, 00)
-    status = "summarized"  # or "invalid_summary" to retry errors
+    collection = mongo_cnx.db["news_unprocessed"]
 
-    articles = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
-                                         start_publish_date=start_date, status=status)
+    query = {
+        'score': {'$exists': False},  # Check for the absence of 'score'
+        'content': {'$exists': True}   # Check for the presence of 'content'
+    }
+    projection = {"_id": 1, "publish_date": 1, "title": 1, "content": 1}
 
-    if articles == []:
+    cursor = collection.find(query, projection=projection)
+    articles_list = [document for document in cursor]
+    # print("INFO  - Document list:", articles_list)
+
+    if articles_list == []:
         print("INFO  - Exiting program. No documents where found.")
-        sys.exit()
+        sys.exit(1)
 
-    print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
+    print("INFO  - Last document _id:", articles_list[-1]["_id"], ", publish_date:", articles_list[-1]["publish_date"])
 
     # 2. Keywords search list
     keyword_collection = mongo_cnx.db["keywords"]
@@ -90,33 +107,34 @@ if __name__ == "__main__":
     print("INFO  - Keyword list:", keyword_list)
 
     # 3. Rate article text with OpenAI
-    document_list = []
-    total_count = len(articles)
+    result_list = []
+    total_count = len(articles_list)
 
-    for idx, item in enumerate(articles, start=1):
+    for idx, item in enumerate(articles_list, start=1):
         print(f'\nINFO  - {idx}/{total_count}  - fetching document {item["_id"]}, `{item["title"][0:120]}`.')
         try:
             # Send article text to openai and fetch summary
             article_body_text = item["content"]
-            response_dict = openai_score_text(article_body_text, keyword_list)
+            cleaned_text = clean_text(article_body_text)
+            response_dict = openai_score_text(cleaned_text, keyword_list)
 
             document_entry = {
                 "_id": item["_id"],
                 "score": response_dict["score"],
                 "explanation": response_dict["explanation"],
             }
-            document_list.append(document_entry)
+            result_list.append(document_entry)
 
         except Exception as e:
             print(f'ERROR - {idx}/{total_count} - Failure fetching summary for document {item["_id"]}:', e)
             continue  # Continue to the next item in case of an error
 
     with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(document_list, json_file)
+        json.dump(result_list, json_file)
 
     # 4. Update Mongodb with new article summaries
     with open(file_path, "r", encoding="utf-8") as json_file:
-        document_list = json.load(json_file)
+        result_list = json.load(json_file)
 
     mongo_cnx = MongoCnx("news_db")
-    mongo_cnx.update_collection(collection_name, document_list)
+    mongo_cnx.update_collection("news_unprocessed", result_list)
