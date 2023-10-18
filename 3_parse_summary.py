@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 from src._drv_mongodb import MongoCnx
 
+
 # Load variables from .env
 load_dotenv()
 openai_apikey = os.getenv("OPENAI_APIKEY")
@@ -81,20 +82,20 @@ if __name__ == "__main__":
     start_date = None  # datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"  # or "invalid_summary" to retry errors
 
-    articles = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
-                                         start_publish_date=start_date, status=status)
+    articles_list = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
+                                              start_publish_date=start_date, status=status)
 
-    if articles == []:
+    if articles_list == []:
         print("INFO  - Exiting program. No documents where found.")
-        sys.exit()
+        sys.exit(1)
 
-    print("INFO  - Last document _id:", articles[-1]["_id"], ", publish_date:", articles[-1]["publish_date"])
+    print("INFO  - Last document _id:", articles_list[-1]["_id"], ", publish_date:", articles_list[-1]["publish_date"])
 
     # 3. Generate article summary with OpenAI
-    document_list = []
-    total_count = len(articles)
+    result_list = []
+    total_count = len(articles_list)
 
-    for idx, item in enumerate(articles, start=1):
+    for idx, item in enumerate(articles_list, start=1):
         print(f'\nINFO  - {idx}/{total_count}  - fetching document {item["_id"]}, `{item["title"][0:120]}`.')
         try:
             # Send article text to openai and fetch summary
@@ -109,7 +110,7 @@ if __name__ == "__main__":
                 "summary": summary,
                 "status": "summarized",
             }
-            document_list.append(document_entry)
+            result_list.append(document_entry)
 
         except Exception as e:
             document_entry = {
@@ -117,16 +118,16 @@ if __name__ == "__main__":
                 "summary": None,
                 "status": "invalid_summary",
             }
-            document_list.append(document_entry)
+            result_list.append(document_entry)
             print(f'ERROR - {idx}/{total_count} - Failure fetching summary for document {item["_id"]}:', e)
             continue  # Continue to the next item in case of an error
 
     with open(file_path, "w", encoding="utf-8") as json_file:
-        json.dump(document_list, json_file)
+        json.dump(result_list, json_file)
 
     # 4. Update Mongodb with new article summaries
     with open(file_path, "r", encoding="utf-8") as json_file:
-        document_list = json.load(json_file)
+        result_list = json.load(json_file)
 
     mongo_cnx = MongoCnx("news_db")
-    mongo_cnx.update_collection(collection_name, document_list)
+    mongo_cnx.update_collection(collection_name, result_list)
