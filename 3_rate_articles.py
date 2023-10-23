@@ -40,19 +40,18 @@ def openai_score_text(input_text, keyword_list):
 
         openai.api_key = os.getenv("OPENAI_APIKEY")
 
-        system_prompt = f'Consider the field of shareholder activism, which involves investors, often referred to \
-            as activist shareholders, taking actions to influence or change the management and governance of \
-            publicly traded companies. Consider the following keywords related to this field: {keyword_list}.'
+        system_prompt = f'You are an assistant to value correlation between texts to fields of business and finance.\
+            I need you to score the relevance of text in the user prompt to the following keywords: {keyword_list}.\
+            Return a score between 0 and 10 and a short explanation for the rating in format of a JSON string with \
+            keys "score" and "explanation"'
 
-        user_prompt_1 = f'In a scale from 0 to 10 score the relevance of the text delimited by triple quotes with \
-            the field of shareholder activism. Return an integer and a short explanation for the rating, in format of \
-            a JSON string with keys "score" and "explanation" . \"\"\"{input_text}\"\"\"'  # noqa
+        user_prompt_1 = f'\"\"\"{input_text}\"\"\"'  # noqa
 
         response_1 = openai.ChatCompletion.create(
             model="gpt-3.5-turbo-16k",
             messages=[
                 {"role": "system", "content": system_prompt},
-                {"role": "assistant", "content": user_prompt_1}
+                {"role": "user", "content": user_prompt_1}
             ],
             temperature=0.7,
             max_tokens=320,
@@ -82,7 +81,7 @@ if __name__ == "__main__":
     file_path = f"{json_files_path}/articles_scores.json"
 
     # 1. list articles to be scored
-    collection = mongo_cnx.db["news_unprocessed"]
+    collection = mongo_cnx.db["news"]
 
     query = {
         'score': {'$exists': False},  # Check for the absence of 'score'
@@ -137,4 +136,4 @@ if __name__ == "__main__":
         result_list = json.load(json_file)
 
     mongo_cnx = MongoCnx("news_db")
-    mongo_cnx.update_collection("news_unprocessed", result_list)
+    mongo_cnx.update_collection("news", result_list)
