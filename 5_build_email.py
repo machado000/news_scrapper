@@ -150,12 +150,14 @@ if __name__ == "__main__":
 
     current_datetime = datetime.now()
     days_ago = current_datetime - timedelta(days=3)
+    min_score = None
     start_publish_date = days_ago
+    status = "summarized"
 
     # match_keywords()
 
     report_payload = build_report_payload(collection_name="news", domain=None,
-                                          min_score=7, start_publish_date=days_ago, status="ready")
+                                          min_score=min_score, start_publish_date=days_ago, status=status)
 
     # Load JSON data
     with open(f"{json_files_path}/report_payload.json", "r", encoding="utf-8") as json_file:
