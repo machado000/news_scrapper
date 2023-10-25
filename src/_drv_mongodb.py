@@ -172,7 +172,7 @@ into '{self.db.name}' collection '{collection.name}'")
             print("ERROR - Failure querying MongoDB: ", e)
             raise PyMongoError
 
-    def get_doc_content(self, collection_name, domain=None, start_publish_date=None, status=None):
+    def get_doc_content(self, collection_name, domain=None, min_score=None, start_publish_date=None, status=None):
         """
         Retrieve document content from given domain and publish date.
 
@@ -191,6 +191,9 @@ into '{self.db.name}' collection '{collection.name}'")
             if domain is not None:
                 query["domain"] = domain
 
+            if min_score is not None:
+                query["score"] = {"$gte": min_score}
+
             if start_publish_date is not None:
                 parsed_date = start_publish_date if isinstance(
                     start_publish_date, (date, datetime)) else pendulum.parse(start_publish_date)
@@ -204,7 +207,8 @@ into '{self.db.name}' collection '{collection.name}'")
                 "publish_date": 1,
                 "title": 1,
                 "content": 1,
-                "status": 1,
+                "score": 1,
+                "status": 1
             }
             sort_parameter = [("publish_date", 1)]
 
@@ -222,7 +226,7 @@ into '{self.db.name}' collection '{collection.name}'")
             print("ERROR - Failure querying MongoDB: ", e)
             raise PyMongoError
 
-    def get_doc_summary(self, collection_name, domain=None, start_publish_date=None, status=None):
+    def get_doc_summary(self, collection_name, domain=None, min_score=None, start_publish_date=None, status=None):
         """
         Retrieve document summaries from given domain and publish date.
 
@@ -240,6 +244,9 @@ into '{self.db.name}' collection '{collection.name}'")
             query = {}
             if domain is not None:
                 query["domain"] = domain
+
+            if min_score is not None:
+                query["score"] = {"$gte": min_score}
 
             if start_publish_date is not None:
                 parsed_date = start_publish_date if isinstance(
