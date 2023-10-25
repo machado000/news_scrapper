@@ -1,5 +1,5 @@
 """
-# decorators.py
+decorators.py
 v. 2023-09-03
 """
 import time
