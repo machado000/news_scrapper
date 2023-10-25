@@ -79,11 +79,12 @@ if __name__ == "__main__":
     # 1. list articles to be summarized
     collection_name = "news"  # or news_unprocessed
     domain = None
+    min_score = None
     start_date = None  # datetime(2023, 10, 1, 12, 00)
     status = "content_parsed"  # or "invalid_summary" to retry errors
 
     articles_list = mongo_cnx.get_doc_content(collection_name=collection_name, domain=domain,
-                                              min_score=7, start_publish_date=start_date, status=status)
+                                              min_score=min_score, start_publish_date=start_date, status=status)
 
     if articles_list == []:
         print("INFO  - Exiting program. No documents where found.")
